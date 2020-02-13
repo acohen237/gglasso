@@ -97,7 +97,7 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
     INTEGER::bs(bn)
     INTEGER::ix(bn)
     INTEGER::iy(bn)
-    INTEGER:: nobs !Aaron comment: number of observations
+    INTEGER:: nobs 
     INTEGER::nvars
     INTEGER::dfmax
     INTEGER::pmax
@@ -129,7 +129,7 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
     DOUBLE PRECISION::alf
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: b
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: oldbeta
-    DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: r ! Aaron comment: what is r??
+    DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: r ! Residue y-beta_k*x etc
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: oldb
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: u
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: dd
@@ -146,22 +146,22 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
     DOUBLE PRECISION:: tlam
     INTEGER:: jx
     INTEGER:: jxx(bn)
-    DOUBLE PRECISION:: ga(bn)
-    DOUBLE PRECISION:: vl(nvars)
+    DOUBLE PRECISION:: ga(bn) ! What is this for??
+    DOUBLE PRECISION:: vl(nvars) ! What is this for?
     DOUBLE PRECISION:: al0
 ! - - - allocate variables - - -
     ALLOCATE(b(0:nvars))
     ALLOCATE(oldbeta(0:nvars))
     ALLOCATE(r(1:nobs))
     ALLOCATE(oidx(1:bn))
-! - - - checking pf - ! Aaron note: -pf(bn) = relative penalties for each group ! Is this the w_k??
+! - - - checking pf - ! pf is the relative penalties for each group
     IF(maxval(pf) <= 0.0D0) THEN
         jerr=10000
         RETURN
     ENDIF
     pf=max(0.0D0,pf)
 ! - - - some initial setup - - -
-    jxx = 0 ! Aaron Comment: What is this???
+    jxx = 0 
     al = 0.0D0
     mnl = Min (mnlam, nlam)
     r = y
@@ -169,22 +169,22 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
     oldbeta = 0.0D0
     idx = 0
     oidx = 0
-    npass = 0
-    ni = npass
+    npass = 0 ! This is a count, correct?
+    ni = npass ! This controls so-called "outer loop"
     alf = 0.0D0
 ! --------- lambda loop ----------------------------
-    IF(flmin < 1.0D0) THEN
-        flmin = Max (mfl, flmin)
+    IF(flmin < 1.0D0) THEN ! This just checks whether user-supplied lambda vect or not
+        flmin = Max (mfl, flmin) ! What is the purpose of mfl?? Is this just to check comp threshold?
         alf=flmin**(1.0D0/(nlam-1.0D0))
     ENDIF
-    vl = matmul(r, x)/nobs
-    DO g = 1,bn
-            ALLOCATE(u(bs(g)))
+    vl = matmul(r, x)/nobs ! I don't understand what vl is here
+    DO g = 1,bn ! For each group...
+            ALLOCATE(u(bs(g))) ! Allocate a vect the size of the g-th group
             u = vl(ix(g):iy(g))
             ga(g) = sqrt(dot_product(u,u))
-            DEALLOCATE(u)
+            DEALLOCATE(u) !! What the fuck is ga for ??
     END DO
-    DO l=1,nlam
+    DO l=1,nlam !! This is the start of the loop over all lambda values...
         al0 = al
         IF(flmin>=1.0D0) THEN
             al=ulam(l)
@@ -204,22 +204,23 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
             ENDIF
         ENDIF
         tlam = (2.0*al-al0)
-        DO g = 1, bn
+        DO g = 1, bn ! We did that weird shit with al, al0 etc. Now we populate jxx, w/e that is..
             IF(jxx(g) == 1) CYCLE
             IF(ga(g) > pf(g) * tlam) jxx(g) = 1
         ENDDO
-! --------- outer loop ---------------------------- ! Aaron Comment: Is this initialization of b? Seems to set b_tilde, for updating
+! --------- outer loop ---------------------------- ! 
+! Does this 'outer loop' just set the warm start for beta?
         DO
             oldbeta(0)=b(0)
             IF(ni>0) THEN
                 DO j=1,ni
-                    g=idx(j) !Aaron comment: is this the index of the j-th group?
+                    g=idx(j)
                     oldbeta(ix(g):iy(g))=b(ix(g):iy(g))
                 ENDDO
             ENDIF
 ! --middle loop-------------------------------------
             DO
-                npass=npass+1 ! Aaron comment: is this keeping track of how many updates??
+                npass=npass+1 
                 dif=0.0D0
                 DO g=1,bn
                     IF(jxx(g) == 0) CYCLE
