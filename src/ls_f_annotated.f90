@@ -174,15 +174,15 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
     alf = 0.0D0
 ! --------- lambda loop ----------------------------
     IF(flmin < 1.0D0) THEN ! This just checks whether user-supplied lambda vect or not
-        flmin = Max (mfl, flmin) ! What is the purpose of mfl?? Is this just to check comp threshold?
+        flmin = Max (mfl, flmin) ! just sets a threshold above zero 
         alf=flmin**(1.0D0/(nlam-1.0D0))
     ENDIF
-    vl = matmul(r, x)/nobs ! I don't understand what vl is here
+    vl = matmul(r, x)/nobs ! Note r gets updated in middle and inner loop 
     DO g = 1,bn ! For each group...
             ALLOCATE(u(bs(g))) ! Allocate a vect the size of the g-th group
             u = vl(ix(g):iy(g))
-            ga(g) = sqrt(dot_product(u,u))
-            DEALLOCATE(u) !! What the fuck is ga for ??
+            ga(g) = sqrt(dot_product(u,u)) ! I'm still confused, doesn't this need to depend on beta???
+            DEALLOCATE(u) 
     END DO
     DO l=1,nlam !! This is the start of the loop over all lambda values...
         al0 = al
@@ -200,18 +200,17 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
                         al0 = max(al0, ga(g) / pf(g))
                     ENDIF
                 END DO
-                al = al0 * alf
+                al = al0 * alf ! is this the l-th lambda value?
             ENDIF
         ENDIF
-        tlam = (2.0*al-al0)
-        DO g = 1, bn ! We did that weird shit with al, al0 etc. Now we populate jxx, w/e that is..
+        tlam = (2.0*al-al0) ! Here is the strong rule...
+        DO g = 1, bn ! We did that weird stuff with al, al0 etc. Now we populate jxx, w/e that is..
             IF(jxx(g) == 1) CYCLE
-            IF(ga(g) > pf(g) * tlam) jxx(g) = 1
+            IF(ga(g) > pf(g) * tlam) jxx(g) = 1 ! Implementing the strong rule
         ENDDO
 ! --------- outer loop ---------------------------- ! 
-! Does this 'outer loop' just set the warm start for beta?
         DO
-            oldbeta(0)=b(0)
+            oldbeta(0)=b(0) ! Are oldbeta and b vectors or scalar?????
             IF(ni>0) THEN
                 DO j=1,ni
                     g=idx(j)
@@ -243,7 +242,7 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
                     IF(any(dd/=0.0D0)) THEN
                         dif=max(dif,gam(g)**2*dot_product(dd,dd))
                         r=r-matmul(x(:,start:end),dd)
-                        IF(oidx(g)==0) THEN
+                        IF(oidx(g)==0) THEN ! Here is where middle loop is different
                             ni=ni+1
                             IF(ni>pmax) EXIT
                             oidx(g)=ni
@@ -294,7 +293,7 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
                         ENDIF
                         DEALLOCATE(u,dd,oldb)
                     ENDDO
-                    IF(intr /= 0) THEN
+                    IF(intr /= 0) THEN ! intr is whether to include intercept
                         d=sum(r)/nobs
                         IF(d/=0.0D0) THEN
                             b(0)=b(0)+d
@@ -302,7 +301,7 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
                             dif=max(dif,d**2)
                         ENDIF
                     ENDIF
-                    IF(dif<eps) EXIT
+                    IF(dif<eps) EXIT ! Exit nearest loop. This is till convergence.
                     IF(npass > maxit) THEN
                         jerr=-l
                         RETURN
