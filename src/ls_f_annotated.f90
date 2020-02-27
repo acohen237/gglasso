@@ -181,7 +181,7 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
     DO g = 1,bn ! For each group...
             ALLOCATE(u(bs(g))) ! Allocate a vect the size of the g-th group
             u = vl(ix(g):iy(g))
-            ga(g) = sqrt(dot_product(u,u)) ! I'm still confused, doesn't this need to depend on beta???
+            ga(g) = sqrt(dot_product(u,u)) ! I'm still confused, doesn't this need to depend on beta??? This is just for the initial
             DEALLOCATE(u) 
     END DO
     DO l=1,nlam !! This is the start of the loop over all lambda values...
@@ -242,7 +242,8 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
                     IF(any(dd/=0.0D0)) THEN
                         dif=max(dif,gam(g)**2*dot_product(dd,dd))
                         r=r-matmul(x(:,start:end),dd)
-                        IF(oidx(g)==0) THEN ! Here is where middle loop is different
+                        IF(oidx(g)==0) THEN ! Here is where middle loop is different; if group g was not in oidx (active), and the
+! difference was nonzero, put it in active (ni)
                             ni=ni+1
                             IF(ni>pmax) EXIT
                             oidx(g)=ni
@@ -309,7 +310,7 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
                 ENDDO
             ENDDO
             IF(ni>pmax) EXIT
-!--- final check ------------------------
+!--- final check ------------------------ ! This checks which violate KKT condition
             jx = 0
             max_gam = maxval(gam)
             IF(any((max_gam*(b-oldbeta)/(1+abs(b)))**2 >= eps)) jx = 1
@@ -326,7 +327,7 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
                 ENDIF
                 DEALLOCATE(u)
             ENDDO
-            IF(jx == 1) CYCLE
+            IF(jx == 1) CYCLE ! This goes all the way back to outer loop
             EXIT
         ENDDO
 !---------- final update variable and save results------------
