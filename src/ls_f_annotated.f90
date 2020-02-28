@@ -84,7 +84,7 @@
 !    25(6), 1129-1141.
 
 ! --------------------------------------------------
-SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
+SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
                     eps,maxit,intr,nalam,b0,beta,idx,nbeta,alam,npass,jerr)
 ! --------------------------------------------------
     IMPLICIT NONE
@@ -147,7 +147,7 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
     DOUBLE PRECISION::al_sparse
     DOUBLE PRECISION::tea
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: s
-
+    INTEGER::soft_g
 
     ! - - - begin - - -
     ! - - - local declarations - - -
@@ -244,13 +244,13 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
                     do soft_g = 1, bs(g)
                         s(soft_g) = sign(abs(s(soft_g))-al_sparse*t_for_s*al, s(soft_g))
                     end do
-                    snorm = sqrt(dot_product(s,s)
+                    snorm = sqrt(dot_product(s,s))
                     tea = snorm - t_for_s*(1-al_sparse)*al
                     if(tea>0.0D0) then
                             b(start:end) = s*tea/snorm
                     else
                             b(start:end) = 0.0D0
-                    
+                    ENDIF
                     u=matmul(r,x(:,start:end))/nobs
                     u=gam(g)*b(start:end)+u
                     unorm=sqrt(dot_product(u,u))
@@ -377,6 +377,4 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
     ENDDO
     DEALLOCATE(b,oldbeta,r,oidx)
     RETURN
-END SUBROUTINE ls_f
-
-
+END SUBROUTINE ls_f_new
