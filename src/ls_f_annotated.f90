@@ -141,6 +141,14 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
     INTEGER::me
     INTEGER::start
     INTEGER::end
+    ! - - - Aaron's declarations
+    DOUBLE PRECISION::snorm
+    DOUBLE PRECISION::t_for_s
+    DOUBLE PRECISION::al_sparse
+    DOUBLE PRECISION::tea
+    DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: s
+
+
     ! - - - begin - - -
     ! - - - local declarations - - -
     DOUBLE PRECISION:: tlam
@@ -182,6 +190,7 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
             ALLOCATE(u(bs(g))) ! Allocate a vect the size of the g-th group
             u = vl(ix(g):iy(g))
             ga(g) = sqrt(dot_product(u,u)) ! I'm still confused, doesn't this need to depend on beta??? This is just for the initial
+            ! Need to soft threshold the ga(g)--only for the strong rule check
             DEALLOCATE(u) 
     END DO
     DO l=1,nlam !! This is the start of the loop over all lambda values...
@@ -229,6 +238,19 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
                     ALLOCATE(dd(bs(g)))
                     ALLOCATE(oldb(bs(g)))
                     oldb=b(start:end)
+                    ALLOCATE(s(bs(g)))
+                    s = matmul(r,x(:,start:end))/nobs
+                    s = s*t_for_s + b(start:end)
+                    do soft_g = 1, bs(g)
+                        s(soft_g) = sign(abs(s(soft_g))-al_sparse*t_for_s*al, s(soft_g))
+                    end do
+                    snorm = sqrt(dot_product(s,s)
+                    tea = snorm - t_for_s*(1-al_sparse)*al
+                    if(tea>0.0D0) then
+                            b(start:end) = s*tea/snorm
+                    else
+                            b(start:end) = 0.0D0
+                    
                     u=matmul(r,x(:,start:end))/nobs
                     u=gam(g)*b(start:end)+u
                     unorm=sqrt(dot_product(u,u))
