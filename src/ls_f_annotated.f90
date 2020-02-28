@@ -251,6 +251,7 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
                     else
                             b(start:end) = 0.0D0
                     ENDIF
+                    deallocate(s)
                     u=matmul(r,x(:,start:end))/nobs
                     u=gam(g)*b(start:end)+u
                     unorm=sqrt(dot_product(u,u))
@@ -296,25 +297,40 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
                         g=idx(j)
                         start=ix(g)
                         end=iy(g)
-                        ALLOCATE(u(bs(g)))
-                        ALLOCATE(dd(bs(g)))
-                        ALLOCATE(oldb(bs(g)))
-                        oldb=b(start:end)
-                        u=matmul(r,x(:,start:end))/nobs
-                        u=gam(g)*b(start:end)+u
-                        unorm=sqrt(dot_product(u,u))
-                        t=unorm-pf(g)*al
-                        IF(t>0.0D0) THEN
-                            b(start:end)=u*t/(gam(g)*unorm)
-                        ELSE
-                            b(start:end)=0.0D0
-                        ENDIF
-                        dd=b(start:end)-oldb
-                        IF(any(dd/=0.0D0)) THEN
-                            dif=max(dif,gam(g)**2*dot_product(dd,dd))
-                            r=r-matmul(x(:,start:end),dd)
-                        ENDIF
-                        DEALLOCATE(u,dd,oldb)
+
+                    ALLOCATE(s(bs(g)))
+                    s = matmul(r,x(:,start:end))/nobs
+                    s = s*t_for_s + b(start:end)
+                    do soft_g = 1, bs(g)
+                        s(soft_g) = sign(abs(s(soft_g))-al_sparse*t_for_s*al, s(soft_g))
+                    end do
+                    snorm = sqrt(dot_product(s,s))
+                    tea = snorm - t_for_s*(1-al_sparse)*al
+                    if(tea>0.0D0) then
+                            b(start:end) = s*tea/snorm
+                    else
+                            b(start:end) = 0.0D0
+                    ENDIF
+                    deallocate(s)
+                    ALLOCATE(u(bs(g)))
+                    ALLOCATE(dd(bs(g)))
+                    ALLOCATE(oldb(bs(g)))
+                    oldb=b(start:end)
+                    u=matmul(r,x(:,start:end))/nobs
+                    u=gam(g)*b(start:end)+u
+                    unorm=sqrt(dot_product(u,u))
+                    t=unorm-pf(g)*al
+                    IF(t>0.0D0) THEN
+                        b(start:end)=u*t/(gam(g)*unorm)
+                    ELSE
+                        b(start:end)=0.0D0
+                    ENDIF
+                    dd=b(start:end)-oldb
+                    IF(any(dd/=0.0D0)) THEN
+                        dif=max(dif,gam(g)**2*dot_product(dd,dd))
+                        r=r-matmul(x(:,start:end),dd)
+                    ENDIF
+                    DEALLOCATE(u,dd,oldb)
                     ENDDO
                     IF(intr /= 0) THEN ! intr is whether to include intercept
                         d=sum(r)/nobs
