@@ -148,6 +148,8 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
     DOUBLE PRECISION::tea
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: s
     INTEGER::soft_g
+    INTEGER::al_t
+    INTEGER::al2
 
     ! - - - begin - - -
     ! - - - local declarations - - -
@@ -193,27 +195,39 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
             ! Need to soft threshold the ga(g)--only for the strong rule check
             DEALLOCATE(u) 
     END DO
-    DO l=1,nlam !! This is the start of the loop over all lambda values...
+    al0 = 0.0D0
+    DO g = 1,bn
+        IF(pf(g)>0.0D0) THEN
+                al0 = max(al0, ga(g)/pf(g))
+        ENDIF
+    END DO
+    al2 = al0 * alf
+    l = 1
+    al_t = 1
+    DO WHILE (l<=nlam) !l=1,nlam !! This is the start of the loop over all lambda values...
         al0 = al
         IF(flmin>=1.0D0) THEN
             al=ulam(l)
+            l = l+1
         ELSE
             IF(l > 2) THEN
                 al=al*alf
+                l = l+1
             ELSE IF(l==1) THEN
                 al=big
+                l = l+1
             ELSE IF(l==2) THEN
-                al0 = 0.0D0
-                DO g = 1,bn
-                    IF(pf(g)>0.0D0) THEN
-                        al0 = max(al0, ga(g) / pf(g))
-                    ENDIF
-                END DO
-                al = al0 * alf ! is this the l-th lambda value?
+                    IF(jx=1) THEN
+                            al = al/0.99
+                            l = l+1
+                    ELSE
+                            al = al2*(0.99**al_t)
+                            al_t = al_t + 1
             ENDIF
         ENDIF
+        ! This is the start of the algorithm, for a given lambda...
         tlam = (2.0*al-al0) ! Here is the strong rule...
-        DO g = 1, bn ! We did that weird stuff with al, al0 etc. Now we populate jxx, w/e that is..
+        DO g = 1, bn 
             IF(jxx(g) == 1) CYCLE
             IF(ga(g) > pf(g) * tlam) jxx(g) = 1 ! Implementing the strong rule
         ENDDO
