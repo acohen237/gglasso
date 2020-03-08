@@ -217,12 +217,13 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
                 al=big
                 l = l+1
             ELSE IF(l==2) THEN
-                    IF(jx=1) THEN
+                    IF(jx==1) THEN
                             al = al/0.99
                             l = l+1
                     ELSE
                             al = al2*(0.99**al_t)
                             al_t = al_t + 1
+                    ENDIF
             ENDIF
         ENDIF
         ! This is the start of the algorithm, for a given lambda...
