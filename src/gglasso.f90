@@ -423,7 +423,7 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: s
     INTEGER::soft_g
     INTEGER::al_t
-    INTEGER::al2
+    DOUBLE PRECISION::al2
 
     ! - - - begin - - -
     ! - - - local declarations - - -
