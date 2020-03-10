@@ -438,7 +438,7 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
     ALLOCATE(oldbeta(0:nvars))
     ALLOCATE(r(1:nobs))
     ALLOCATE(oidx(1:bn))
-    ALLOCATE(al_sparse)
+!    ALLOCATE(al_sparse)
 ! - - - checking pf - ! pf is the relative penalties for each group
     IF(maxval(pf) <= 0.0D0) THEN
         jerr=10000
@@ -685,7 +685,7 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
         ENDDO
         IF(me>dfmax) EXIT
     ENDDO
-    DEALLOCATE(b,oldbeta,r,oidx, al_sparse)
+    DEALLOCATE(b,oldbeta,r,oidx)
     RETURN
 END SUBROUTINE ls_f_new
 
