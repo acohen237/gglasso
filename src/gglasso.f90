@@ -417,13 +417,13 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
     INTEGER::end
     ! - - - Aaron's declarations
     DOUBLE PRECISION::snorm
-    DOUBLE PRECISION::t_for_s
-    DOUBLE PRECISION::al_sparse
-    DOUBLE PRECISION::tea
-    DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: s
-    INTEGER::soft_g
-    INTEGER::al_t
-    DOUBLE PRECISION::al2
+    DOUBLE PRECISION::t_for_s(bn) ! this is for now just 1/gamma
+    DOUBLE PRECISION::al_sparse ! this is alpha, controlling sparsity vs group
+    DOUBLE PRECISION::tea ! this takes the place of 't' in the update step for ls
+    DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: s ! takes the place of 'u' in update for ls
+    INTEGER::soft_g ! this is an iterating variable 'vectorizing' the soft thresholding operator
+    INTEGER::al_t ! just for the lambda loop
+    DOUBLE PRECISION::al2 ! just for the lambda loop
 
     ! - - - begin - - -
     ! - - - local declarations - - -
@@ -457,7 +457,7 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
     npass = 0 ! This is a count, correct?
     ni = npass ! This controls so-called "outer loop"
     alf = 0.0D0
-    al_sparse = 0.5 ! This is alpha for sparsity, controls sparse vs group
+    al_sparse = 0.5 ! This is alpha for sparsity, controls sparse vs group; eventually should be an input parameter
 ! --------- lambda loop ----------------------------
     IF(flmin < 1.0D0) THEN ! This just checks whether user-supplied lambda vect or not
         flmin = Max (mfl, flmin) ! just sets a threshold above zero 
@@ -529,6 +529,7 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
                     ALLOCATE(dd(bs(g)))
                     ALLOCATE(oldb(bs(g)))
                     oldb=b(start:end)
+                    t_for_s = 1/(gam(g))
                     ALLOCATE(s(bs(g)))
                     s = matmul(r,x(:,start:end))/nobs
                     s = s*t_for_s + b(start:end)
