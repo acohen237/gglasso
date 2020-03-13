@@ -458,6 +458,7 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
     ni = npass ! This controls so-called "outer loop"
     alf = 0.0D0
     al_sparse = 0.5 ! This is alpha for sparsity, controls sparse vs group; eventually should be an input parameter
+    t_for_s = 1/gam ! might need to use a loop if no vectorization.........
 ! --------- lambda loop ----------------------------
     IF(flmin < 1.0D0) THEN ! This just checks whether user-supplied lambda vect or not
         flmin = Max (mfl, flmin) ! just sets a threshold above zero 
@@ -529,15 +530,14 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
                     ALLOCATE(dd(bs(g)))
                     ALLOCATE(oldb(bs(g)))
                     oldb=b(start:end)
-                    t_for_s = 1/(gam(g))
                     ALLOCATE(s(bs(g)))
                     s = matmul(r,x(:,start:end))/nobs
-                    s = s*t_for_s + b(start:end)
+                    s = s*t_for_s(g) + b(start:end)
                     do soft_g = 1, bs(g)
-                        s(soft_g) = sign(abs(s(soft_g))-al_sparse*t_for_s*al, s(soft_g))
+                        s(soft_g) = sign(abs(s(soft_g))-al_sparse*t_for_s(g)*al, s(soft_g))
                     end do
                     snorm = sqrt(dot_product(s,s))
-                    tea = snorm - t_for_s*(1-al_sparse)*al
+                    tea = snorm - t_for_s(g)*(1-al_sparse)*al
                     if(tea>0.0D0) then
                             b(start:end) = s*tea/snorm
                     else
@@ -595,12 +595,12 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
                     ALLOCATE(oldb(bs(g)))
                     oldb=b(start:end)
                     s = matmul(r,x(:,start:end))/nobs
-                    s = s*t_for_s + b(start:end)
+                    s = s*t_for_s(g) + b(start:end)
                     do soft_g = 1, bs(g)
-                        s(soft_g) = sign(abs(s(soft_g))-al_sparse*t_for_s*al, s(soft_g))
+                        s(soft_g) = sign(abs(s(soft_g))-al_sparse*t_for_s(g)*al, s(soft_g))
                     end do
                     snorm = sqrt(dot_product(s,s))
-                    tea = snorm - t_for_s*(1-al_sparse)*al
+                    tea = snorm - t_for_s(g)*(1-al_sparse)*al
                     if(tea>0.0D0) then
                             b(start:end) = s*tea/snorm
                     else
