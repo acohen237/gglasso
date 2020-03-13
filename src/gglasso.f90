@@ -405,7 +405,7 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: oldbeta
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: r ! Residue y-beta_k*x etc
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: oldb
-    ! DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: u ! no longer using this
+    DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: u ! No longer using this for update step, but still need for other parts 
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: dd
     INTEGER, DIMENSION (:), ALLOCATABLE :: oidx
     INTEGER:: g
