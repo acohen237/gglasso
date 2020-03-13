@@ -396,16 +396,16 @@ SUBROUTINE ls_f_new (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ula
     ! - - - local declarations - - -
     DOUBLE PRECISION:: max_gam
     DOUBLE PRECISION::d
-    DOUBLE PRECISION::t
+    ! DOUBLE PRECISION::t ! No longer using this
     DOUBLE PRECISION::dif
-    DOUBLE PRECISION::unorm
+    ! DOUBLE PRECISION::unorm ! No longer using this for ls_new
     DOUBLE PRECISION::al
     DOUBLE PRECISION::alf
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: b
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: oldbeta
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: r ! Residue y-beta_k*x etc
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: oldb
-    DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: u
+    ! DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: u ! no longer using this
     DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: dd
     INTEGER, DIMENSION (:), ALLOCATABLE :: oidx
     INTEGER:: g
