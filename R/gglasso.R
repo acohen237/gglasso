@@ -104,7 +104,7 @@
 #' m2 <- gglasso(x=colon$x,y=colon$y,group=group2,loss="logit")
 #' 
 #' @export
-gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_new", "logit", "sqsvm", 
+gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse", "logit", "sqsvm", 
     "hsvm","wls"), nlambda = 100, lambda.factor = ifelse(nobs < nvars, 0.05, 0.001), 
     lambda = NULL, pf = sqrt(bs), weight = NULL, dfmax = as.integer(max(group)) + 
         1, pmax = min(dfmax * 1.2, as.integer(max(group))), eps = 1e-08, maxit = 3e+08, 
@@ -202,7 +202,7 @@ gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_new", "logit", "sqsvm
     fit <- switch(loss, 
 	ls = ls(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
         dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr), 
-	ls_new = ls_new(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
+	ls_sparse = ls_sparse(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
         dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr), 
 	logit = logit(bn, 
         bs, ix, iy, nobs, nvars, x, y, pf, dfmax, pmax, nlam, flmin, 

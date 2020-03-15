@@ -24,3 +24,6 @@ y <- X%*%beta_star + eps
 out <- gglasso(X,y,group=grp, loss='ls')
 
 out$beta[,50]
+
+# Next we try ls_sparse
+out_sp <- gglasso(X,y,group=grp, loss = 'ls_sparse')
