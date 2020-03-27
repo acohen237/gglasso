@@ -423,6 +423,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
     INTEGER::soft_g ! this is an iterating variable 'vectorizing' the soft thresholding operator
     INTEGER::al_t ! just for the lambda loop
     DOUBLE PRECISION::al2 ! just for the lambda loop
+    INTEGER::vl_iter ! for iterating over columns(?) of x*r
     ! - - - begin - - -
     ! - - - local declarations - - -
     DOUBLE PRECISION:: tlam
@@ -471,10 +472,13 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
             DEALLOCATE(u) 
     END DO
     al0 = 0.0D0
-    DO g = 1,bn ! We probably shouldn't loop...
-        IF(pf(g)>0.0D0) THEN
-                al0 = max(vl)
-        ENDIF
+    ! DO g = 1,bn ! Commenting out, can't just do max(vl)
+    !     IF(pf(g)>0.0D0) THEN
+    !             al0 = max(vl)
+    !     ENDIF
+    ! END DO
+    DO vl_iter = 1,nvars
+        al0 = max(al0, vl(vl_iter))
     END DO
     al2 = al0 * alf
     l = 1
