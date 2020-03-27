@@ -455,7 +455,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
     npass = 0 ! This is a count, correct?
     ni = npass ! This controls so-called "outer loop"
     alf = 0.0D0
-    al_sparse = 0.5 ! This is alpha for sparsity, controls sparse vs group; eventually should be an input parameter
+    al_sparse = 0.95 ! This is alpha for sparsity, controls sparse vs group; eventually should be an input parameter
     t_for_s = 1/gam ! might need to use a loop if no vectorization.........
 ! --------- lambda loop ----------------------------
     IF(flmin < 1.0D0) THEN
