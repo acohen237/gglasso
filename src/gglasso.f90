@@ -424,6 +424,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
     INTEGER::al_t ! just for the lambda loop
     DOUBLE PRECISION::al2 ! just for the lambda loop
     INTEGER::vl_iter ! for iterating over columns(?) of x*r
+    INTEGER::jk ! to break out of the while loop
     ! - - - begin - - -
     ! - - - local declarations - - -
     DOUBLE PRECISION:: tlam
@@ -483,6 +484,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
     al2 = al0 * alf
     l = 1
     al_t = 1
+    jk = 1
     DO WHILE (l<=nlam) !l=1,nlam !! This is the start of the loop over all lambda values...
         al0 = al
         IF(flmin>=1.0D0) THEN
@@ -507,6 +509,10 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
                             al = al2*(0.99**al_t)
                             al_t = al_t + 1
                             print *, "The l=2, when (I guess) jx != 1"
+                            jk = jk + 1
+                            IF jk > 50
+                                RETURN
+                            ENDIF
                     ENDIF
             ENDIF
         ENDIF
