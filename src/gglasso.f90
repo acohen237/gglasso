@@ -488,20 +488,25 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
         IF(flmin>=1.0D0) THEN
             al=ulam(l)
             l = l+1
+            print *, "This is at the flmin step of the while loop"
         ELSE
             IF(l > 2) THEN 
                 al=al*alf
                 l = l+1
+                print *, "This is the l>2 step of while loop"
             ELSE IF(l==1) THEN
                 al=big
                 l = l+1
+                print *, "This is at l=1 step of while loop"
             ELSE IF(l==2) THEN
                     IF(jx==1) THEN
                             al = al/0.99
                             l = l+1
+                            print *, "The l=2, when jx==1"
                     ELSE
                             al = al2*(0.99**al_t)
                             al_t = al_t + 1
+                            print *, "The l=2, when (I guess) jx != 1"
                     ENDIF
             ENDIF
         ENDIF
