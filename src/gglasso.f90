@@ -1,87 +1,3 @@
-! --------------------------------------------------------------------------
-! gglasso.f90: the BMD algorithm for group-lasso penalized learning.
-! --------------------------------------------------------------------------
-! 
-! USAGE:
-! 
-! SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
-!                     eps,maxit,intr,nalam,b0,beta,idx,nbeta,alam,npass,jerr)
-! 
-! SUBROUTINE log_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
-!                     eps,maxit,intr,nalam,b0,beta,idx,nbeta,alam,npass,jerr)
-! 
-! SUBROUTINE hsvm_f (delta,bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
-!                     eps,maxit,intr,nalam,b0,beta,idx,nbeta,alam,npass,jerr)
-! 
-! SUBROUTINE sqsvm_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
-!                     eps,maxit,intr,nalam,b0,beta,idx,nbeta,alam,npass,jerr)
-! 
-! INPUT ARGUMENTS:
-!    delta = delta parameter in Huberized hinge loss, only available in HSVM case (hsvm_f).
-!    bn = number of groups
-!    bs(bn) = size of each group
-!    ix(bn) = first index for each group
-!    iy(bn) = last index for each group
-!    gam(bn) = upper bound gamma_k in MM algorithm
-!    nobs = number of observations
-!    nvars = number of predictor variables
-!    x(nobs, nvars) = matrix of predictors, of dimension N * p; each row is an observation vector.
-!    y(nobs) = response variable. This argument should be in {-inf, inf} for regression. 
-!                and should be a two-level factor {-1, 1} for classification.
-!    pf(bn) = relative penalties for each group
-!                pf(k) = 0 => kth group unpenalized
-!    dfmax = limit the maximum number of variables in the model.
-!            (one of the stopping criterion)
-!    pmax = limit the maximum number of variables ever to be nonzero. 
-!           For example once beta enters the model, no matter how many 
-!           times it exits or re-enters model through the path, it will 
-!           be counted only once. 
-!    nlam = the number of lambda values
-!    flmin = user control of lambda values (>=0)
-!            flmin < 1.0 => minimum lambda = flmin*(largest lambda value)
-!            flmin >= 1.0 => use supplied lambda values (see below)
-!    ulam(nlam) = user supplied lambda values (ignored if flmin < 1.0)
-!    eps = convergence threshold for coordinate majorization descent. 
-!          Each inner coordinate majorization descent loop continues 
-!          until the relative change in any coefficient is less than eps.
-!    maxit = maximum number of outer-loop iterations allowed at fixed lambda value. 
-!            (suggested values, maxit = 100000)
-!    intr = whether to include the intercept in the model
-! 
-!
-! OUTPUT:
-! 
-!    nalam = actual number of lambda values (solutions)
-!    b0(nvars) = intercept values for each solution
-!    beta(nvars, nlam) = compressed coefficient values for each solution
-!    idx(pmax) = pointers to compressed coefficients
-!    nbeta(nlam) = number of compressed coefficients for each solution
-!    alam(nlam) = lambda values corresponding to each solution
-!    npass = actual number of passes over the data for all lambda values
-!    jerr = error flag:
-!           jerr  = 0 => no error
-!           jerr > 0 => fatal error - no output returned
-!                    jerr < 7777 => memory allocation error
-!                    jerr = 10000 => maxval(vp) <= 0.0
-!           jerr < 0 => non fatal error - partial output:
-!                    Solutions for larger lambdas (1:(k-1)) returned.
-!                    jerr = -k => convergence for kth lambda value not reached
-!                           after maxit (see above) iterations.
-!                    jerr = -10000-k => number of non zero coefficients along path
-!                           exceeds pmax (see above) at kth lambda value.
-! 
-! LICENSE: GNU GPL (version 2 or later)
-! 
-! AUTHORS:
-!    * Yi Yang (yi.yang6@mcgill.ca) and + Hui Zou (hzou@stat.umn.edu), 
-!    * Department of Mathematics and Statistics, McGill University
-!    + School of Statistics, University of Minnesota.
-! 
-! REFERENCES:
-!    Yang, Y. and Zou, H. (2015). 
-!    A Fast Unified Algorithm for Computing Group-Lasso Penalized Learning Problems
-!    Statistics and Computing.
-!    25(6), 1129-1141.
 
 ! --------------------------------------------------
 SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
@@ -466,18 +382,12 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
     ENDIF
     vl = matmul(r, x)/nobs ! Note r gets updated in middle and inner loop 
     DO g = 1,bn ! For each group...
-            ALLOCATE(u(bs(g))) ! Allocate a vect the size of the g-th group
+            ALLOCATE(u(bs(g))) 
             u = vl(ix(g):iy(g))
-            ga(g) = sqrt(dot_product(u,u)) ! I'm still confused, doesn't this need to depend on beta??? This is just for the initial
-            ! Need to soft threshold the ga(g)--only for the strong rule check
+            ga(g) = sqrt(dot_product(u,u)) 
             DEALLOCATE(u) 
     END DO
     al0 = 0.0D0
-    ! DO g = 1,bn ! Commenting out, can't just do max(vl)
-    !     IF(pf(g)>0.0D0) THEN
-    !             al0 = max(vl)
-    !     ENDIF
-    ! END DO
     DO vl_iter = 1,nvars
         al0 = max(al0, vl(vl_iter))
     END DO
@@ -486,6 +396,8 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
     al_t = 1
     jk = 1
     DO WHILE (l<=nlam) !l=1,nlam !! This is the start of the loop over all lambda values...
+        print *, "l = ", l
+        print *, "al = ", al
         al0 = al
         IF(flmin>=1.0D0) THEN
             al=ulam(l)
@@ -508,23 +420,29 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
                     ELSE
                             al = al2*(0.99**al_t)
                             al_t = al_t + 1
-                            print *, "The l=2, when (I guess) jx != 1"
+                            print *, "The l=2, when jx != 1"
+                            print *, "al_t = ", al_t
+                            print *, "jx = ", jx
+                            print *, "the vector jxx = ", jxx
                             jk = jk + 1
-                            IF jk > 50
-                                RETURN
-                            ENDIF
+                            ! IF (jk == 4) al = 1 ! We wanted to force al to 1, but it doesn't seem to work...
+                            IF (jk > 5) RETURN
                     ENDIF
             ENDIF
         ENDIF
         ! This is the start of the algorithm, for a given lambda...
         tlam = (2.0*al-al0) ! Here is the strong rule...
+        print *, "Here is tlam"
+        print *, tlam
         DO g = 1, bn 
-            IF(jxx(g) == 1) CYCLE
+            IF(jxx(g) == 1)  CYCLE
             IF(ga(g) > pf(g) * tlam) jxx(g) = 1 ! Implementing the strong rule
         ENDDO
 ! --------- outer loop ---------------------------- ! 
         DO
-            oldbeta(0)=b(0) ! Are oldbeta and b vectors or scalar?????
+            oldbeta(0)=b(0) 
+            print *, "Here is the outer loop, and here's oldbeta:"
+            print *, oldbeta
             IF(ni>0) THEN
                 DO j=1,ni
                     g=idx(j)
@@ -533,13 +451,16 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
             ENDIF
 ! --middle loop-------------------------------------
             DO
+                print *, "This is where we enter the middle loop"
                 npass=npass+1 
                 dif=0.0D0
                 DO g=1,bn
-                    IF(jxx(g) == 0) CYCLE
+                    IF(jxx(g) == 0) THEN
+                            print *, "in middle loop, jxx(g), for group (g) = ", g, ", is 0, so we CYCLE"
+                            CYCLE
+                    ENDIF
                     start=ix(g)
                     end=iy(g)
-                    ! ALLOCATE(u(bs(g)))
                     ALLOCATE(dd(bs(g)))
                     ALLOCATE(oldb(bs(g)))
                     oldb=b(start:end)
@@ -596,6 +517,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
                ENDIF
 ! --inner loop----------------------
                 DO
+                    PRINT *, "Here is where the inner loop starts"
                     npass=npass+1
                     dif=0.0D0
                     DO j=1,ni
@@ -656,6 +578,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
             ENDDO
             IF(ni>pmax) EXIT
 !--- final check ------------------------ ! This checks which violate KKT condition
+            PRINT *, "Here is where the final check starts"
             jx = 0
             max_gam = maxval(gam)
             IF(any((max_gam*(b-oldbeta)/(1+abs(b)))**2 >= eps)) jx = 1
@@ -676,6 +599,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
             EXIT
         ENDDO
 !---------- final update variable and save results------------
+        PRINT *, "Here is where the final update starts"
         IF(ni>pmax) THEN
             jerr=-10000-l
             EXIT
