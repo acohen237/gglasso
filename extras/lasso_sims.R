@@ -23,7 +23,57 @@ y <- X%*%beta_star + eps
 # Now we need to try the lassos
 out <- gglasso(X,y,group=grp, loss='ls')
 
-out$beta[,50]
+beta50 <- out$beta[,50]
 
 # Next we try ls_sparse
 out_sp <- gglasso(X,y,group=grp, loss = 'ls_sparse')
+
+beta50_sparse <- out$beta[,50]
+
+
+###############################################################################
+## A much smaller data set for debugging
+
+
+# Set the n and p values
+set.seed(1010)
+n <- 100
+p <- 9
+
+# There are different ways to generate a data matrix, I'm gonna be a dummy
+
+X <- matrix(data = rnorm(n*p, mean=0, sd=1), nrow = n, ncol = p)
+
+eps <- rnorm(n, mean = 0, sd=1)
+
+beta_star <- c(rep(5,3), rep(-5,3),rep(0,3))
+
+
+# we generate the data so that there are groups of 5 vars each
+grp <- rep(1:3, each=3)
+
+y <- X%*%beta_star + eps
+
+# Now we need to try the lassos
+out <- gglasso(X,y,group=grp, loss='ls')
+
+#beta50 <- out$beta[,50]
+
+# Next we try ls_sparse
+out_sp <- gglasso(X,y,group=grp, loss = 'ls_sparse')
+
+#beta50_sparse <- out$beta[,50]
+
+
+
+
+
+
+# Dan's code
+par(mfrow=c(2,2))
+plot(out)
+plot(out_sp)
+b1 = apply(out$beta, 2, sd)
+b2 = apply(out_sp$beta, 2, sd)
+matplot(b1, t(out$beta), ty='l', lty=1, col = grp)
+matplot(b2, t(out_sp$beta), ty='l', lty=1, col = grp)

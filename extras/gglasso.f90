@@ -455,59 +455,43 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
     npass = 0 ! This is a count, correct?
     ni = npass ! This controls so-called "outer loop"
     alf = 0.0D0
-    al_sparse = 0.5 ! This is alpha for sparsity, controls sparse vs group; eventually should be an input parameter
+    al_sparse = 0.95 ! This is alpha for sparsity, controls sparse vs group; eventually should be an input parameter
     t_for_s = 1/gam ! might need to use a loop if no vectorization.........
 ! --------- lambda loop ----------------------------
-    IF(flmin < 1.0D0) THEN ! This just checks whether user-supplied lambda vect or not
-        flmin = Max (mfl, flmin) ! just sets a threshold above zero 
+    IF(flmin < 1.0D0) THEN
+        flmin = Max (mfl, flmin)
         alf=flmin**(1.0D0/(nlam-1.0D0))
     ENDIF
-    vl = matmul(r, x)/nobs ! Note r gets updated in middle and inner loop 
-    DO g = 1,bn ! For each group...
-            ALLOCATE(u(bs(g))) ! Allocate a vect the size of the g-th group
-            u = vl(ix(g):iy(g))
-            ga(g) = sqrt(dot_product(u,u)) ! I'm still confused, doesn't this need to depend on beta??? This is just for the initial
-            ! Need to soft threshold the ga(g)--only for the strong rule check
-            DEALLOCATE(u) 
-    END DO
-    al0 = 0.0D0
+    vl = matmul(r, x)/nobs
     DO g = 1,bn
-        IF(pf(g)>0.0D0) THEN
-                al0 = max(al0, ga(g)/pf(g))
-        ENDIF
+            ALLOCATE(u(bs(g)))
+            u = vl(ix(g):iy(g))
+            ga(g) = sqrt(dot_product(u,u))
+            DEALLOCATE(u)
     END DO
-    al2 = al0 * alf
-    l = 1
-    al_t = 1
-    DO WHILE (l<=nlam) !l=1,nlam !! This is the start of the loop over all lambda values...
+    DO l=1,nlam
         al0 = al
         IF(flmin>=1.0D0) THEN
             al=ulam(l)
-            l = l+1
         ELSE
-            IF(l > 1) THEN ! should be l >2, trying something
+            IF(l > 2) THEN
                 al=al*alf
-                l = l+1
             ELSE IF(l==1) THEN
-                !al=big
-                al=al2
-                l = l+1
-            ! ELSE IF(l==2) THEN
-            !         IF(jx==1) THEN
-            !                 al = al/0.99
-            !                 l = l+1
-            !         ELSE
-            !                 al = al2*(0.99**al_t)
-            !                 al_t = al_t + 1
-            !                 l = l + 1 ! THIS SHOULDN'T BE HERE, TEMPORARY TO BREAK OUT OF WHILE LOOP
-            !         ENDIF
+                al=big
+            ELSE IF(l==2) THEN
+                al0 = 0.0D0
+                DO g = 1,bn
+                    IF(pf(g)>0.0D0) THEN
+                        al0 = max(al0, ga(g) / pf(g))
+                    ENDIF
+                END DO
+                al = al0 * alf
             ENDIF
         ENDIF
-        ! This is the start of the algorithm, for a given lambda...
-        tlam = (2.0*al-al0) ! Here is the strong rule...
-        DO g = 1, bn 
+        tlam = (2.0*al-al0)
+        DO g = 1, bn
             IF(jxx(g) == 1) CYCLE
-            IF(ga(g) > pf(g) * tlam) jxx(g) = 1 ! Implementing the strong rule
+            IF(ga(g) > pf(g) * tlam) jxx(g) = 1
         ENDDO
 ! --------- outer loop ---------------------------- ! 
         DO
