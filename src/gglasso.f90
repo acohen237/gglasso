@@ -413,7 +413,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
                 l = l+1
                 print *, "This is at l=1 step of while loop"
             ELSE IF(l==2) THEN
-                    IF(jx==1) THEN
+                    IF(maxval(jxx)>0) THEN
                             al0 = al/0.99
                             l = l+1
                             print *, "The l=2, when jx==1"
@@ -422,11 +422,11 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
                             al_t = al_t + 1
                             print *, "The l=2, when jx != 1"
                             print *, "al_t = ", al_t
-                            print *, "jx = ", jx
-                            print *, "the vector jxx = ", jxx
+                            ! print *, "jx = ", jx
+                            ! print *, "the vector jxx = ", jxx
                             jk = jk + 1
                             ! IF (jk == 4) al = 1 ! We wanted to force al to 1, but it doesn't seem to work...
-                            IF (jk > 5) RETURN
+                            IF (jk > 50) RETURN
                     ENDIF
             ENDIF
         ENDIF
@@ -436,8 +436,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
         ELSE
                 tlam = (2.0*al-al0) ! Here is the strong rule...
         ENDIF
-        print *, "Here is tlam"
-        print *, tlam
+        print *, "Here is tlam = ", tlam
         DO g = 1, bn 
             IF(jxx(g) == 1)  CYCLE
             IF(ga(g) > pf(g) * tlam) jxx(g) = 1 ! Implementing the strong rule
@@ -445,8 +444,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
 ! --------- outer loop ---------------------------- ! 
         DO
             oldbeta(0)=b(0) 
-            print *, "Here is the outer loop, and here's oldbeta:"
-            print *, oldbeta
+            print *, "Here is the outer loop, and here's oldbeta:", oldbeta
             IF(ni>0) THEN
                 DO j=1,ni
                     g=idx(j)

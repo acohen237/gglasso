@@ -32,10 +32,11 @@ ls_sparse <- function(bn, bs, ix, iy, nobs, nvars, x, y, pf, dfmax,
         nbeta = integer(nlam), alam = double(nlam), npass = integer(1), jerr = integer(1))
     #################################################################################
     # output
-    outlist <- getoutput(fit, maxit, pmax, nvars, vnames)
-    outlist <- c(outlist, list(npasses = fit$npass, jerr = fit$jerr, group = group))
-    class(outlist) <- c("ls_sparse")
-    outlist
+    fit
+    #outlist <- getoutput(fit, maxit, pmax, nvars, vnames)
+    #outlist <- c(outlist, list(npasses = fit$npass, jerr = fit$jerr, group = group))
+    #class(outlist) <- c("ls_sparse")
+    #outlist
 }
 
 

@@ -217,9 +217,9 @@ gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse", "logit", "sq
 		)
     #################################################################################
     # output
-    if (is.null(lambda)) 
-        fit$lambda <- lamfix(fit$lambda)
-    fit$call <- this.call
-    class(fit) <- c("gglasso", class(fit))
+    # if (is.null(lambda)) 
+    #    fit$lambda <- lamfix(fit$lambda)
+    #fit$call <- this.call
+    #class(fit) <- c("gglasso", class(fit))
     fit
 } 

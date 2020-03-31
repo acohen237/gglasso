@@ -8,3 +8,6 @@ src/*.dll
 inst/doc
 *.Rproj
 *.swp
+
+*DS_Store
+*.Rapp.history
