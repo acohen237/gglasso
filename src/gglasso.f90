@@ -623,7 +623,8 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
             IF(any(beta(ix(g):iy(g),l)/=0.0D0)) me=me+1
         ENDDO
         IF(me>dfmax) EXIT
-    ENDDO
+     ENDDO
+     nalam=nalam-1
     DEALLOCATE(b,oldbeta,r,oidx)
     RETURN
 END SUBROUTINE ls_f_sparse
