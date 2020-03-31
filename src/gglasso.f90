@@ -89,7 +89,7 @@ SUBROUTINE ls_f (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
     ni = npass
     alf = 0.0D0
 ! --------- lambda loop ----------------------------
-    IF(flmin < 1.0D0) THEN
+    IF(flmin < 1.0D0) THEN ! flmin <1 means NOT user-supplied, so this is default
         flmin = Max (mfl, flmin)
         alf=flmin**(1.0D0/(nlam-1.0D0))
     ENDIF
@@ -376,7 +376,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
     al_sparse = 0.5 ! This is alpha for sparsity, controls sparse vs group; eventually should be an input parameter
     t_for_s = 1/gam ! might need to use a loop if no vectorization.........
 ! --------- lambda loop ----------------------------
-    IF(flmin < 1.0D0) THEN ! This just checks whether user-supplied lambda vect or not
+    IF(flmin < 1.0D0) THEN ! THIS is the default...
         flmin = Max (mfl, flmin) ! just sets a threshold above zero 
         alf=flmin**(1.0D0/(nlam-1.0D0))
     ENDIF
@@ -414,7 +414,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
                 print *, "This is at l=1 step of while loop"
             ELSE IF(l==2) THEN
                     IF(jx==1) THEN
-                            al = al/0.99
+                            al0 = al/0.99
                             l = l+1
                             print *, "The l=2, when jx==1"
                     ELSE
@@ -431,7 +431,11 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
             ENDIF
         ENDIF
         ! This is the start of the algorithm, for a given lambda...
-        tlam = (2.0*al-al0) ! Here is the strong rule...
+        IF(l<3) THEN
+                tlam = al
+        ELSE
+                tlam = (2.0*al-al0) ! Here is the strong rule...
+        ENDIF
         print *, "Here is tlam"
         print *, tlam
         DO g = 1, bn 
