@@ -221,4 +221,5 @@ gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse", "logit", "sq
         fit$lambda <- lamfix(fit$lambda)
     fit$call <- this.call
     class(fit) <- c("gglasso", class(fit))
+    fit
 } 
