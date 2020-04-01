@@ -274,7 +274,7 @@ END SUBROUTINE ls_f
 
 ! --------------------------------------------------
 SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
-     eps,maxit,intr,nalam,b0,beta,idx,nbeta,alam,npass,jerr)
+     eps,maxit,intr,nalam,b0,beta,idx,nbeta,alam,npass,jerr,al_sparse)
   ! --------------------------------------------------
   
   IMPLICIT NONE
@@ -309,6 +309,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
   DOUBLE PRECISION:: b0(nlam)
   DOUBLE PRECISION::beta(nvars,nlam)
   DOUBLE PRECISION::alam(nlam)
+  DOUBLE PRECISION::asparse
   ! - - - local declarations - - -
   DOUBLE PRECISION:: max_gam
   DOUBLE PRECISION::d
@@ -334,7 +335,6 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
   ! - - - Aaron's declarations
   DOUBLE PRECISION::snorm
   DOUBLE PRECISION::t_for_s(bn) ! this is for now just 1/gamma
-  DOUBLE PRECISION::al_sparse ! this is alpha, controlling sparsity vs group
   DOUBLE PRECISION::tea ! this takes the place of 't' in the update step for ls
   DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: s ! takes the place of 'u' in update for ls
   INTEGER::soft_g ! this is an iterating variable 'vectorizing' the soft thresholding operator
@@ -376,7 +376,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
   npass = 0 ! This is a count, correct?
   ni = npass ! This controls so-called "outer loop"
   alf = 0.0D0
-  al_sparse = 0.05 ! This is alpha for sparsity, controls sparse vs group; eventually should be an input parameter
+  ! al_sparse = 0.05 ! This is alpha for sparsity, controls sparse vs group; eventually should be an input parameter
   t_for_s = 1/gam ! might need to use a loop if no vectorization.........
   ! --------- lambda loop ----------------------------
   IF(flmin < 1.0D0) THEN ! THIS is the default...
