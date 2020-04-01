@@ -46,7 +46,7 @@ X <- matrix(data = rnorm(n*p, mean=0, sd=1), nrow = n, ncol = p)
 
 eps <- rnorm(n, mean = 0, sd=1)
 
-beta_star <- c(rep(5,3), rep(-5,3),rep(0,3))
+beta_star <- c(rep(5,3), c(-5,0,-3),rep(0,3))
 
 
 # we generate the data so that there are groups of 5 vars each
@@ -64,7 +64,8 @@ out_sp <- gglasso(X,y,group=grp, loss = 'ls_sparse')
 
 #beta50_sparse <- out$beta[,50]
 
-
+group_norm <- function(x, grp) sum(by(x, grp, function(x) sqrt(sum(x^2))))
+sp_group_norm <- function(x, grp, alp=.05) group_norm(x,grp)*(1-alp) + alp*sum(abs(x))
 
 
 

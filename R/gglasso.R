@@ -63,6 +63,8 @@
 #' @param delta the parameter \eqn{\delta}{delta} in \code{"hsvm"} (Huberized
 #' squared hinge loss). Default is 1.
 #' @param intercept Whether to include intercept in the model. Default is TRUE.
+#' @param asparse the weight to put on the ell1 norm in sparse group lasso. Default 
+#' is 0.05 
 #' @return An object with S3 class \code{\link{gglasso}}.  \item{call}{the call
 #' that produced this object} \item{b0}{intercept sequence of length
 #' \code{length(lambda)}} \item{beta}{a \code{p*length(lambda)} matrix of
@@ -108,7 +110,7 @@ gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse", "logit", "sq
     "hsvm","wls"), nlambda = 100, lambda.factor = ifelse(nobs < nvars, 0.05, 0.001), 
     lambda = NULL, pf = sqrt(bs), weight = NULL, dfmax = as.integer(max(group)) + 
         1, pmax = min(dfmax * 1.2, as.integer(max(group))), eps = 1e-08, maxit = 3e+08, 
-    delta,intercept=TRUE) {
+    delta,intercept=TRUE, asparse = 0.05) {
     #################################################################################
     #\tDesign matrix setup, error checking
     this.call <- match.call()
@@ -154,6 +156,12 @@ gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse", "logit", "sq
     
     if (!identical(as.integer(sort(unique(group))), as.integer(1:bn))) 
         stop("Groups must be consecutively numbered 1,2,3,...")
+    
+    if (loss=="ls_sparse" && (asparse>1 || asparse<0)){
+      asparse = 0
+      loss="ls"
+      warning("asparse must be in [0,1], running ordinary group lasso.")
+    } 
     
     ix <- rep(NA, bn)
     iy <- rep(NA, bn)
@@ -203,7 +211,8 @@ gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse", "logit", "sq
 	ls = ls(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
         dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr), 
 	ls_sparse = ls_sparse(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
-        dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr), 
+        dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr, 
+        asparse), 
 	logit = logit(bn, 
         bs, ix, iy, nobs, nvars, x, y, pf, dfmax, pmax, nlam, flmin, 
         ulam, eps, maxit, vnames, group, intr), 
@@ -221,4 +230,5 @@ gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse", "logit", "sq
         fit$lambda <- lamfix(fit$lambda)
     fit$call <- this.call
     class(fit) <- c("gglasso", class(fit))
+    fit
 } 

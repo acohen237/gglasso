@@ -19,7 +19,7 @@ ls <- function(bn, bs, ix, iy, nobs, nvars, x, y, pf, dfmax,
 }
 
 ls_sparse <- function(bn, bs, ix, iy, nobs, nvars, x, y, pf, dfmax, 
-    pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr) {
+    pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr, asparse) {
     #################################################################################
     # call Fortran core
     gamma <- rep(NA, bn)
@@ -29,7 +29,8 @@ ls_sparse <- function(bn, bs, ix, iy, nobs, nvars, x, y, pf, dfmax,
     fit <- .Fortran("ls_f_sparse", bn, bs, ix, iy, gamma, nobs, nvars, as.double(x), 
         as.double(y), pf, dfmax, pmax, nlam, flmin, ulam, eps, maxit, intr, nalam = integer(1), 
         b0 = double(nlam), beta = double(nvars * nlam), idx = integer(pmax), 
-        nbeta = integer(nlam), alam = double(nlam), npass = integer(1), jerr = integer(1))
+        nbeta = integer(nlam), alam = double(nlam), npass = integer(1), jerr = integer(1), 
+        alsparse = asparse)
     #################################################################################
     # output
     outlist <- getoutput(fit, maxit, pmax, nvars, vnames)
