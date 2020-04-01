@@ -342,6 +342,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
   DOUBLE PRECISION::al2 ! just for the lambda loop
   INTEGER::vl_iter ! for iterating over columns(?) of x*r
   INTEGER::jk ! to break out of the while loop
+  INTEGER::kill_count
   ! - - - begin - - -
   ! - - - local declarations - - -
   DOUBLE PRECISION:: tlam
@@ -370,6 +371,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
   b = 0.0D0
   oldbeta = 0.0D0
   idx = 0
+  kill_count = 0
   oidx = 0
   npass = 0 ! This is a count, correct?
   ni = npass ! This controls so-called "outer loop"
@@ -399,6 +401,8 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
   DO WHILE (l < nlam) !! This is the start of the loop over all lambda values...
      print *, "l = ", l
      print *, "al = ", al
+     IF(kill_count > 1000) RETURN
+     kill_count = kill_count + 1
      al0 = al ! store old al value on subsequent loops, first set to al
      IF(flmin>=1.0D0) THEN ! user supplied lambda value, break out of everything
         l = l+1
@@ -566,10 +570,12 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
      ENDDO ! Ends outer loop
      !---------- final update variable and save results------------
      IF(l==0) THEN
-        IF(maxval(jxx)==0) CYCLE ! don't save anything, we're still decrementing lambda
-     ELSE
-        l=2
-        alam(1) = al / alf ! store previous, larger value
+        IF(maxval(jxx)==0) THEN
+           CYCLE ! don't save anything, we're still decrementing lambda
+        ELSE
+           l=2
+           alam(1) = al / alf ! store previous, larger value
+        ENDIF
      ENDIF
      PRINT *, "Here is where the final update starts"
      IF(ni>pmax) THEN
