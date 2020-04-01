@@ -338,7 +338,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
   DOUBLE PRECISION::tea ! this takes the place of 't' in the update step for ls
   DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: s ! takes the place of 'u' in update for ls
   INTEGER::soft_g ! this is an iterating variable 'vectorizing' the soft thresholding operator
-  INTEGER::al_t ! just for the lambda loop
+  !  INTEGER::al_t ! just for the lambda loop
   DOUBLE PRECISION::al2 ! just for the lambda loop
   INTEGER::vl_iter ! for iterating over columns(?) of x*r
   INTEGER::jk ! to break out of the while loop
@@ -519,7 +519,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
                  ELSE
                     b(startix:endix) = 0.0D0
                  ENDIF
-                 dd=b(start:end)-oldb
+                 dd=b(startix:endix)-oldb
                  IF(any(dd/=0.0D0)) THEN
                     dif=max(dif,gam(g)**2*dot_product(dd,dd))
                     r=r-matmul(x(:,startix:endix),dd)
