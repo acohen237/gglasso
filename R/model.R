@@ -30,7 +30,7 @@ ls_sparse <- function(bn, bs, ix, iy, nobs, nvars, x, y, pf, dfmax,
         as.double(y), pf, dfmax, pmax, nlam, flmin, ulam, eps, maxit, intr, nalam = integer(1), 
         b0 = double(nlam), beta = double(nvars * nlam), idx = integer(pmax), 
         nbeta = integer(nlam), alam = double(nlam), npass = integer(1), jerr = integer(1), 
-        asparse = double(asparse))
+        alsparse = asparse)
     #################################################################################
     # output
     outlist <- getoutput(fit, maxit, pmax, nvars, vnames)

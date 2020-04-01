@@ -274,7 +274,7 @@ END SUBROUTINE ls_f
 
 ! --------------------------------------------------
 SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,ulam,&
-     eps,maxit,intr,nalam,b0,beta,idx,nbeta,alam,npass,jerr,al_sparse)
+     eps,maxit,intr,nalam,b0,beta,idx,nbeta,alam,npass,jerr,alsparse)
   ! --------------------------------------------------
   
   IMPLICIT NONE
@@ -309,7 +309,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
   DOUBLE PRECISION:: b0(nlam)
   DOUBLE PRECISION::beta(nvars,nlam)
   DOUBLE PRECISION::alam(nlam)
-  DOUBLE PRECISION::asparse
+  DOUBLE PRECISION::alsparse
   ! - - - local declarations - - -
   DOUBLE PRECISION:: max_gam
   DOUBLE PRECISION::d
@@ -394,27 +394,28 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
   DO vl_iter = 1,nvars
      al0 = max(al0, vl(vl_iter)) ! Infty norm of X'y, big overkill for lam_max
   ENDDO
-  al2 = al0 / (1-al_sparse) ! this value ensures all betas are 0 
+  PRINT *, alsparse
+  al2 = al0 ! / (1-alsparse) ! this value ensures all betas are 0 , divide by 1-a?
   jk = 1
   l = 0
   al = al2 ! start al at this big value
   DO WHILE (l < nlam) !! This is the start of the loop over all lambda values...
-     print *, "l = ", l
-     print *, "al = ", al
+     ! print *, "l = ", l
+     ! print *, "al = ", al
      IF(kill_count > 1000) RETURN
      kill_count = kill_count + 1
      al0 = al ! store old al value on subsequent loops, first set to al
      IF(flmin>=1.0D0) THEN ! user supplied lambda value, break out of everything
         l = l+1
         al=ulam(l)
-        print *, "This is at the flmin step of the while loop"
+        ! print *, "This is at the flmin step of the while loop"
      ELSE
         al=al*alf
         IF(l > 1) THEN ! have some active groups
            l = l+1
-           print *, "This is the l>1 step of while loop"
+           ! print *, "This is the l>1 step of while loop"
         ELSE IF(l==0) THEN
-           print *, "This is at l=0 step of while loop"
+           ! print *, "This is at l=0 step of while loop"
            ! Trying to find an active group
            jk = jk+1
            IF (jk > 50) RETURN ! here just to kill the while loop if we're stuck
@@ -424,7 +425,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
      IF(l==0) THEN
         tlam = al
      ELSE
-        tlam = (2.0*al-al0) ! Here is the strong rule...
+        tlam = max((2.0*al-al0), 0.0) ! Here is the strong rule...
      ENDIF
      print *, "Here is tlam = ", tlam
      DO g = 1, bn 
@@ -434,7 +435,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
      ! --------- outer loop ---------------------------- ! 
      DO
         oldbeta(0)=b(0) 
-        print *, "Here is the outer loop, and here's oldbeta:", oldbeta
+        ! print *, "Here is the outer loop, and here's oldbeta:", oldbeta
         IF(ni>0) THEN
            DO j=1,ni
               g=idx(j)
@@ -443,12 +444,12 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
         ENDIF
         ! --middle loop-------------------------------------
         DO
-           print *, "This is where we enter the middle loop"
+           ! print *, "This is where we enter the middle loop"
            npass=npass+1 
            dif=0.0D0
            DO g=1,bn
               IF(jxx(g) == 0) THEN
-                 print *, "in middle loop, jxx(g), for group (g) = ", g, ", is 0, so we CYCLE"
+                 ! print *, "in middle loop, jxx(g), for group (g) = ", g, ", is 0, so we CYCLE"
                  CYCLE
               ENDIF
               startix=ix(g)
@@ -460,10 +461,10 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
               s = matmul(r,x(:,startix:endix))/nobs
               s = s*t_for_s(g) + b(startix:endix)
               DO soft_g = 1, bs(g)
-                 s(soft_g) = sign(abs(s(soft_g))-al_sparse*t_for_s(g)*al, s(soft_g))
+                 s(soft_g) = sign(abs(s(soft_g))-alsparse*t_for_s(g)*al, s(soft_g))
               ENDDO
               snorm = sqrt(dot_product(s,s))
-              tea = snorm - t_for_s(g)*(1-al_sparse)*al
+              tea = snorm - t_for_s(g)*(1-alsparse)*al
               IF(tea>0.0D0) THEN
                  b(startix:endix) = s*tea/snorm
               ELSE
@@ -500,7 +501,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
            ENDIF
            ! --inner loop----------------------
            DO
-              PRINT *, "Here is where the inner loop starts"
+              ! PRINT *, "Here is where the inner loop starts"
               npass=npass+1
               dif=0.0D0
               DO j=1,ni
@@ -514,10 +515,10 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
                  s = matmul(r,x(:,startix:endix))/nobs
                  s = s*t_for_s(g) + b(startix:endix)
                  DO soft_g = 1, bs(g)
-                    s(soft_g) = sign(abs(s(soft_g))-al_sparse*t_for_s(g)*al, s(soft_g))
+                    s(soft_g) = sign(abs(s(soft_g))-alsparse*t_for_s(g)*al, s(soft_g))
                  ENDDO
                  snorm = sqrt(dot_product(s,s))
-                 tea = snorm - t_for_s(g)*(1-al_sparse)*al
+                 tea = snorm - t_for_s(g)*(1-alsparse)*al
                  IF(tea>0.0D0) THEN
                     b(startix:endix) = s*tea/snorm
                  ELSE
@@ -548,7 +549,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
         ENDDO ! End middle loop
         IF(ni>pmax) EXIT
         !--- final check ------------------------ ! This checks which violate KKT condition
-        PRINT *, "Here is where the final check starts"
+        ! PRINT *, "Here is where the final check starts"
         jx = 0
         max_gam = maxval(gam)
         IF(any((max_gam*(b-oldbeta)/(1+abs(b)))**2 >= eps)) jx = 1
@@ -577,7 +578,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
            alam(1) = al / alf ! store previous, larger value
         ENDIF
      ENDIF
-     PRINT *, "Here is where the final update starts"
+     ! PRINT *, "Here is where the final update starts"
      IF(ni>pmax) THEN
         jerr=-10000-l
         EXIT
