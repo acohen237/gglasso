@@ -16,4 +16,10 @@ beta_star <- c(rep(5,5), c(5,-5,2,0,0), rep(-5,5), c(2,-3,8,0,0), rep(0,(p-20)))
 
 y <- X%*%beta_star + eps
 
+groups <- rep(1:20, each=5)
+
 # Now we need to try the lassos
+
+out <- gglasso(X, y, group = groups, loss = 'ls')
+
+out_sp <- gglasso(X,y, group = groups, loss="ls_sparse")
