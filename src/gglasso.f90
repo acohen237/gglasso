@@ -463,7 +463,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
               s = matmul(r,x(:,startix:endix))/nobs
               s = s*t_for_s(g) + b(startix:endix)
               DO soft_g = 1, bs(g)
-                 s(soft_g) = sign(abs(s(soft_g))-alsparse*t_for_s(g)*al, s(soft_g))
+                 s(soft_g) = sign(max(abs(s(soft_g))-alsparse*t_for_s(g)*al, 0.), s(soft_g))
               ENDDO
               snorm = sqrt(dot_product(s,s))
               tea = snorm - t_for_s(g)*(1-alsparse)*al
@@ -517,7 +517,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
                  s = matmul(r,x(:,startix:endix))/nobs
                  s = s*t_for_s(g) + b(startix:endix)
                  DO soft_g = 1, bs(g)
-                    s(soft_g) = sign(abs(s(soft_g))-alsparse*t_for_s(g)*al, s(soft_g))
+                    s(soft_g) = sign(max(abs(s(soft_g))-alsparse*t_for_s(g)*al, 0.), s(soft_g))
                  ENDDO
                  snorm = sqrt(dot_product(s,s))
                  tea = snorm - t_for_s(g)*(1-alsparse)*al
@@ -564,12 +564,12 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
            ALLOCATE(s(bs(g)))
            s = matmul(r,x(:,startix:endix))/nobs
            DO soft_g = 1, bs(g)
-              s(soft_g) = sign(abs(s(soft_g))-alsparse*al, s(soft_g))
+              s(soft_g) = sign(max(abs(s(soft_g))-alsparse*al, 0.), s(soft_g))
            ENDDO
            snorm = sqrt(dot_product(s,s))
            ga(g) = snorm
            DEALLOCATE(s)
-           IF(ga(g) > al*pf(g))THEN
+           IF(ga(g) > al*pf(g)*(1-alsparse))THEN
               jxx(g) = 1
               jx = 1
            ENDIF
