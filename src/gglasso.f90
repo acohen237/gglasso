@@ -309,7 +309,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
   DOUBLE PRECISION:: b0(nlam)
   DOUBLE PRECISION::beta(nvars,nlam)
   DOUBLE PRECISION::alam(nlam)
-  DOUBLE PRECISION::alsparse
+  DOUBLE PRECISION::alsparse ! Should be alpha for the sparsity weight
   ! - - - local declarations - - -
   DOUBLE PRECISION:: max_gam
   DOUBLE PRECISION::d
@@ -418,16 +418,18 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
            ! print *, "This is at l=0 step of while loop"
            ! Trying to find an active group
            jk = jk+1
+           ! print *, l
+           ! print *, jk
            IF (jk > 50) RETURN ! here just to kill the while loop if we're stuck
         ENDIF
      ENDIF
      ! This is the start of the algorithm, for a given lambda...
      IF(l==0) THEN
-        tlam = al
+        tlam = al*(1-alsparse)
      ELSE
         tlam = max((2.0*al-al0), 0.0) ! Here is the strong rule...
      ENDIF
-     print *, "Here is tlam = ", tlam
+     ! print *, "Here is tlam = ", tlam
      DO g = 1, bn 
         IF(jxx(g) == 1)  CYCLE
         IF(ga(g) > pf(g) * tlam) jxx(g) = 1 ! Implementing the strong rule
@@ -557,14 +559,20 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
         vl = matmul(r, x)/nobs
         DO g = 1, bn
            IF(jxx(g) == 1) CYCLE
-           ALLOCATE(u(bs(g)))
-           u = vl(ix(g):iy(g))
-           ga(g) = sqrt(dot_product(u,u))
+           startix=ix(g)
+           endix=iy(g)
+           ALLOCATE(s(bs(g)))
+           s = matmul(r,x(:,startix:endix))/nobs
+           DO soft_g = 1, bs(g)
+              s(soft_g) = sign(abs(s(soft_g))-alsparse*al, s(soft_g))
+           ENDDO
+           snorm = sqrt(dot_product(s,s))
+           ga(g) = snorm
+           DEALLOCATE(s)
            IF(ga(g) > al*pf(g))THEN
               jxx(g) = 1
               jx = 1
            ENDIF
-           DEALLOCATE(u)
         ENDDO
         IF(jx == 1) CYCLE ! This goes all the way back to outer loop
         EXIT
