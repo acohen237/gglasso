@@ -13,3 +13,5 @@ group_norm <- function(v, vg) {
   s <- s + sqrt(sum(last_subvec^2))
   return(s)
 }
+
+
