@@ -76,17 +76,32 @@ X <- matrix(data = rnorm(n*p, mean=0, sd=1), nrow = n, ncol = p)
 
 eps <- rnorm(n, mean = 0, sd=1)
 
-
+############This beta is NOT sparse#####################################
+########################################################################
 beta_star <- rep(0,p)
 for (i in 0:(20-1)) {
   beta_star[(50*i + 1):(50*(i+1))] <- rep((-1)^i*i, 50)
   beta_star[(50*i + 20):(50*i + 29)] <- rep(0,10)
 }
+#########################################################################
+
+
+
+# As per Dan's suggestion, we make a new beta with fewer nonzero coefficients 
+# than observations. This is for n = 10,000 and p = 1000...
+########################################################################
+beta_star2 <- rep(0,p)
+for (i in 0:(20-1)) {
+  beta_star[(50*i + 1):(50*(i+1))] <- rep((-1)^i*i, 50)
+  beta_star[(50*i + 10):(50*i + 39)] <- rep(0,30)
+}
+#########################################################################
 
 
 grp <- rep(1:20, each=50)
 
-y <- X%*%beta_star + eps
+y <- X%*%beta_star2 + eps
+
 
 # Now we need to try the lassos
 out <- gglasso(X,y,group=grp, loss='ls')
@@ -94,9 +109,9 @@ out <- gglasso(X,y,group=grp, loss='ls')
 # Next we try ls_sparse
 out_sp <- gglasso(X,y,group=grp, loss = 'ls_sparse')
 
-
-#group_norm <- function(x) sum(by(x, grp, function(x) sqrt(sum(x^2))))
-#sp_group_norm <- function(x, alp=.05) group_norm(x)*(1-alp) + alp*sum(abs(x))
+#The below code uses grp_norm etc, not group_norm. See above for grp_norm
+group_norm <- function(x) sum(by(x, grp, function(x) sqrt(sum(x^2))))
+sp_group_norm <- function(x, alp=.05) group_norm(x)*(1-alp) + alp*sum(abs(x))
 
 b1 = apply(out$beta, 2, grp_norm, grp=grp)
 b2 = apply(out_sp$beta, 2, sparse_grp_norm, grp=grp)
