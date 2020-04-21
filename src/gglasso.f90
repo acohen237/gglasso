@@ -415,7 +415,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
           l = l+1
           ! print *, "This is the l>1 step of while loop"
         ELSE IF(l==0) THEN
-          al=al*max(alf,.99)
+          al=al*.99
           tlam=al
           ! Trying to find an active group
         ENDIF

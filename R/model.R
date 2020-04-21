@@ -23,8 +23,8 @@ ls_sparse <- function(bn, bs, ix, iy, nobs, nvars, x, y, pf, dfmax,
     pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr, asparse, standardize) {
     #################################################################################
     # call Fortran core
+    intercept = 0L
     if(intr){
-        intercept = 0L
         ym = mean(y)
         xm = colMeans(x)
         x = sweep(x,2,xm)
@@ -35,7 +35,7 @@ ls_sparse <- function(bn, bs, ix, iy, nobs, nvars, x, y, pf, dfmax,
         x = sweep(x,2,xs,"/")
     }
     gamma <- rep(NA, bn)
-    for (g in 1:bn) gamma[g] <- RSpectra::svds(x,1,0,0)$d^2
+    for (g in 1:bn) gamma[g] <- RSpectra::svds(x[,ix[g]:iy[g]],1,0,0)$d^2
     gamma <- gamma/nobs
     gamma <- as.double(gamma)
     fit <- .Fortran("ls_f_sparse", bn, bs, ix, iy, gamma, nobs, nvars, as.double(x), 
