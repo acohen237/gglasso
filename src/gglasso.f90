@@ -318,6 +318,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
   ! DOUBLE PRECISION::unorm ! No longer using this for ls_new
   DOUBLE PRECISION::al
   DOUBLE PRECISION::alf
+  DOUBLE PRECISION::sg
   DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: b
   DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: oldbeta
   DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: r ! Residue y-beta_k*x etc
@@ -338,14 +339,13 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
   DOUBLE PRECISION::tea ! this takes the place of 't' in the update step for ls
   DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: s ! takes the place of 'u' in update for ls
   INTEGER::soft_g ! this is an iterating variable 'vectorizing' the soft thresholding operator
-  !  INTEGER::al_t ! just for the lambda loop
-  DOUBLE PRECISION::al2 ! just for the lambda loop
   INTEGER::vl_iter ! for iterating over columns(?) of x*r
-  INTEGER::jk ! to break out of the while loop
   INTEGER::kill_count
   ! - - - begin - - -
   ! - - - local declarations - - -
   DOUBLE PRECISION:: tlam
+  DOUBLE PRECISION:: lama
+  DOUBLE PRECISION:: lam1ma
   INTEGER:: jx
   INTEGER:: jxx(bn)
   DOUBLE PRECISION:: ga(bn) ! What is this for??
@@ -376,63 +376,57 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
   npass = 0 ! This is a count, correct?
   ni = npass ! This controls so-called "outer loop"
   alf = 0.0D0
-  ! al_sparse = 0.05 ! This is alpha for sparsity, controls sparse vs group; eventually should be an input parameter
   t_for_s = 1/gam ! might need to use a loop if no vectorization.........
   ! --------- lambda loop ----------------------------
   IF(flmin < 1.0D0) THEN ! THIS is the default...
      flmin = Max (mfl, flmin) ! just sets a threshold above zero 
      alf=flmin**(1.0D0/(nlam-1.0D0))
   ENDIF
+  ! PRINT *, alf
   vl = matmul(r, x)/nobs ! Note r gets updated in middle and inner loop 
+  al0 = 0.0D0
   DO g = 1,bn ! For each group...
      ALLOCATE(u(bs(g))) 
      u = vl(ix(g):iy(g))
      ga(g) = sqrt(dot_product(u,u)) 
      DEALLOCATE(u) 
   ENDDO
-  al0 = 0.0D0
   DO vl_iter = 1,nvars
-     al0 = max(al0, vl(vl_iter)) ! Infty norm of X'y, big overkill for lam_max
+     al0 = max(al0, abs(vl(vl_iter))) ! Infty norm of X'y, big overkill for lam_max
   ENDDO
-  PRINT *, alsparse
-  al2 = al0 ! / (1-alsparse) ! this value ensures all betas are 0 , divide by 1-a?
-  jk = 1
+  ! PRINT *, alsparse
+  al = al0 ! / (1-alsparse) ! this value ensures all betas are 0 , divide by 1-a?
   l = 0
-  al = al2 ! start al at this big value
+  tlam = 0.0D0
   DO WHILE (l < nlam) !! This is the start of the loop over all lambda values...
      ! print *, "l = ", l
      ! print *, "al = ", al
-     IF(kill_count > 1000) RETURN
-     kill_count = kill_count + 1
+     ! IF(kill_count > 1000) RETURN
+     ! kill_count = kill_count + 1
      al0 = al ! store old al value on subsequent loops, first set to al
      IF(flmin>=1.0D0) THEN ! user supplied lambda value, break out of everything
         l = l+1
         al=ulam(l)
         ! print *, "This is at the flmin step of the while loop"
      ELSE
-        al=al*alf
         IF(l > 1) THEN ! have some active groups
-           l = l+1
-           ! print *, "This is the l>1 step of while loop"
+          al=al*alf
+          tlam = max((2.0*al-al0), 0.0) ! Here is the strong rule...
+          l = l+1
+          ! print *, "This is the l>1 step of while loop"
         ELSE IF(l==0) THEN
-           ! print *, "This is at l=0 step of while loop"
-           ! Trying to find an active group
-           jk = jk+1
-           ! print *, l
-           ! print *, jk
-           IF (jk > 50) RETURN ! here just to kill the while loop if we're stuck
+          al=al*max(alf,.99)
+          tlam=al
+          ! Trying to find an active group
         ENDIF
      ENDIF
+     lama = al*alsparse
+     lam1ma = al*(1-alsparse)
      ! This is the start of the algorithm, for a given lambda...
-     IF(l==0) THEN
-        tlam = al*(1-alsparse)
-     ELSE
-        tlam = max((2.0*al-al0), 0.0) ! Here is the strong rule...
-     ENDIF
      ! print *, "Here is tlam = ", tlam
      DO g = 1, bn 
         IF(jxx(g) == 1)  CYCLE
-        IF(ga(g) > pf(g) * tlam) jxx(g) = 1 ! Implementing the strong rule
+        IF(ga(g) > pf(g)*tlam*(1-alsparse)) jxx(g) = 1 ! Implementing the strong rule
      ENDDO
      ! --------- outer loop ---------------------------- ! 
      DO
@@ -450,10 +444,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
            npass=npass+1 
            dif=0.0D0
            DO g=1,bn
-              IF(jxx(g) == 0) THEN
-                 ! print *, "in middle loop, jxx(g), for group (g) = ", g, ", is 0, so we CYCLE"
-                 CYCLE
-              ENDIF
+              IF(jxx(g) == 0) CYCLE
               startix=ix(g)
               endix=iy(g)
               ALLOCATE(dd(bs(g)))
@@ -463,10 +454,11 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
               s = matmul(r,x(:,startix:endix))/nobs
               s = s*t_for_s(g) + b(startix:endix)
               DO soft_g = 1, bs(g)
-                 s(soft_g) = sign(max(abs(s(soft_g))-alsparse*t_for_s(g)*al, 0.), s(soft_g))
+                 sg = s(soft_g)
+                 s(soft_g) = sign(max(abs(s(soft_g))-lama*t_for_s(g), 0.0D0), s(soft_g))
               ENDDO
               snorm = sqrt(dot_product(s,s))
-              tea = snorm - t_for_s(g)*(1-alsparse)*al
+              tea = snorm - t_for_s(g)*lam1ma*pf(g)
               IF(tea>0.0D0) THEN
                  b(startix:endix) = s*tea/snorm
               ELSE
@@ -517,10 +509,10 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
                  s = matmul(r,x(:,startix:endix))/nobs
                  s = s*t_for_s(g) + b(startix:endix)
                  DO soft_g = 1, bs(g)
-                    s(soft_g) = sign(max(abs(s(soft_g))-alsparse*t_for_s(g)*al, 0.), s(soft_g))
+                    s(soft_g) = sign(max(abs(s(soft_g))-lama*t_for_s(g), 0.0D0), s(soft_g))
                  ENDDO
                  snorm = sqrt(dot_product(s,s))
-                 tea = snorm - t_for_s(g)*(1-alsparse)*al
+                 tea = snorm - t_for_s(g)*lam1ma*pf(g)
                  IF(tea>0.0D0) THEN
                     b(startix:endix) = s*tea/snorm
                  ELSE
@@ -564,12 +556,12 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
            ALLOCATE(s(bs(g)))
            s = matmul(r,x(:,startix:endix))/nobs
            DO soft_g = 1, bs(g)
-              s(soft_g) = sign(max(abs(s(soft_g))-alsparse*al, 0.), s(soft_g))
+              s(soft_g) = sign(max(abs(s(soft_g))-lama, 0.0D0), s(soft_g))
            ENDDO
            snorm = sqrt(dot_product(s,s))
            ga(g) = snorm
            DEALLOCATE(s)
-           IF(ga(g) > al*pf(g)*(1-alsparse))THEN
+           IF(ga(g) > pf(g)*lam1ma)THEN
               jxx(g) = 1
               jx = 1
            ENDIF
@@ -583,7 +575,7 @@ SUBROUTINE ls_f_sparse (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,flmin,
            CYCLE ! don't save anything, we're still decrementing lambda
         ELSE
            l=2
-           alam(1) = al / alf ! store previous, larger value
+           alam(1) = al / max(alf,.99) ! store previous, larger value
         ENDIF
      ENDIF
      ! PRINT *, "Here is where the final update starts"

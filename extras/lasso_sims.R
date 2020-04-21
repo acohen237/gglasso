@@ -3,8 +3,8 @@
 
 # Set the n and p values
 set.seed(1010)
-n <- 1000
-p <- 100
+n <- 100
+p <- 200
 
 # There are different ways to generate a data matrix, I'm gonna be a dummy
 
@@ -16,7 +16,7 @@ beta_star <- c(rep(5,5), c(5,-5,2,0,0), rep(-5,5), c(2,-3,8,0,0), rep(0,(p-20)))
 
 y <- X%*%beta_star + eps
 
-groups <- rep(1:20, each=5)
+groups <- rep(1:(p/5), each=5)
 
 # Now we need to try the lassos
 
@@ -92,8 +92,8 @@ for (i in 0:(20-1)) {
 ########################################################################
 beta_star2 <- rep(0,p)
 for (i in 0:(20-1)) {
-  beta_star[(50*i + 1):(50*(i+1))] <- rep((-1)^i*i, 50)
-  beta_star[(50*i + 10):(50*i + 39)] <- rep(0,30)
+  beta_star2[(50*i + 1):(50*(i+1))] <- rep((-1)^i*i, 50)
+  beta_star2[(50*i + 10):(50*i + 39)] <- rep(0,30)
 }
 #########################################################################
 
@@ -117,8 +117,8 @@ b1 = apply(out$beta, 2, grp_norm, grp=grp)
 b2 = apply(out_sp$beta, 2, sparse_grp_norm, grp=grp)
 
 par(mfcol=c(2,2))
-matplot(b1/max(b1), t(out$beta[beta_star ==0,]), ty='l', lty=1, col = grp)
-matplot(b2/max(b2), t(out_sp$beta[beta_star==0,]), ty='l', lty=1, col = grp)
-plot(b1/max(b1), apply(out$beta == 0 & beta_star == 0, 2, sum)/sum(beta_star==0), ty='l')
-lines(b2/max(b2), apply(out_sp$beta == 0 & beta_star == 0, 2, sum)/sum(beta_star==0), col=2)
+matplot(b1/max(b1), t(out$beta[beta_star2 ==0,]), ty='l', lty=1, col = grp)
+matplot(b2/max(b2), t(out_sp$beta[beta_star2==0,]), ty='l', lty=1, col = grp)
+plot(b1/max(b1), apply(out$beta == 0 & beta_star2 == 0, 2, sum)/sum(beta_star2==0), ty='l')
+lines(b2/max(b2), apply(out_sp$beta == 0 & beta_star2 == 0, 2, sum)/sum(beta_star2==0), col=2)
 par(mfcol=c(1,1))

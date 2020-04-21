@@ -107,10 +107,10 @@
 #' 
 #' @export
 gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse", "logit", "sqsvm", 
-    "hsvm","wls"), nlambda = 100, lambda.factor = ifelse(nobs < nvars, 0.05, 0.001), 
+    "hsvm","wls"), nlambda = 100, lambda.factor = ifelse(nobs < nvars, 0.01, 1e-04), 
     lambda = NULL, pf = sqrt(bs), weight = NULL, dfmax = as.integer(max(group)) + 
         1, pmax = min(dfmax * 1.2, as.integer(max(group))), eps = 1e-08, maxit = 3e+08, 
-    delta,intercept=TRUE, asparse = 0.05) {
+    delta, intercept=TRUE, asparse = 0.05, standardize=TRUE) {
     #################################################################################
     #\tDesign matrix setup, error checking
     this.call <- match.call()
@@ -212,7 +212,7 @@ gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse", "logit", "sq
         dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr), 
 	ls_sparse = ls_sparse(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
         dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr, 
-        asparse), 
+        asparse, standardize), 
 	logit = logit(bn, 
         bs, ix, iy, nobs, nvars, x, y, pf, dfmax, pmax, nlam, flmin, 
         ulam, eps, maxit, vnames, group, intr), 

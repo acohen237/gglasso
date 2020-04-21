@@ -10,7 +10,7 @@ gglasso(
   group = NULL,
   loss = c("ls", "ls_sparse", "logit", "sqsvm", "hsvm", "wls"),
   nlambda = 100,
-  lambda.factor = ifelse(nobs < nvars, 0.05, 0.001),
+  lambda.factor = ifelse(nobs < nvars, 0.01, 1e-04),
   lambda = NULL,
   pf = sqrt(bs),
   weight = NULL,
@@ -20,7 +20,8 @@ gglasso(
   maxit = 3e+08,
   delta,
   intercept = TRUE,
-  asparse = 0.05
+  asparse = 0.05,
+  standardize = TRUE
 )
 }
 \arguments{
