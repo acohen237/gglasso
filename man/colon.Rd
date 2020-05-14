@@ -4,7 +4,9 @@
 \name{colon}
 \alias{colon}
 \title{Simplified gene expression data from Alon et al. (1999)}
-\format{An object of class \code{list} of length 2.}
+\format{
+An object of class \code{list} of length 2.
+}
 \source{
 The data are described in Alon et al. (1999) and can be freely
 downloaded from

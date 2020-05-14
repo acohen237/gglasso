@@ -4,7 +4,9 @@
 \name{bardet}
 \alias{bardet}
 \title{Simplified gene expression data from Scheetz et al. (2006)}
-\format{An object of class \code{list} of length 2.}
+\format{
+An object of class \code{list} of length 2.
+}
 \usage{
 bardet
 }

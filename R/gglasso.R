@@ -106,8 +106,7 @@
 #' m2 <- gglasso(x=colon$x,y=colon$y,group=group2,loss="logit")
 #' 
 #' @export
-gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse", "logit", "sqsvm", 
-    "hsvm","wls"), nlambda = 100, lambda.factor = ifelse(nobs < nvars, 0.01, 1e-04), 
+gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse"), nlambda = 100, lambda.factor = ifelse(nobs < nvars, 0.01, 1e-04), 
     lambda = NULL, pf = sqrt(bs), weight = NULL, dfmax = as.integer(max(group)) + 
         1, pmax = min(dfmax * 1.2, as.integer(max(group))), eps = 1e-08, maxit = 3e+08, 
     delta, intercept=TRUE, asparse = 0.05, standardize=TRUE) {
@@ -207,22 +206,14 @@ gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse", "logit", "sq
     intr <- as.integer(intercept)
     #################################################################################
     # call R sub-functions
-    fit <- switch(loss, 
-	ls = ls(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
-        dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr), 
-	ls_sparse = ls_sparse(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
-        dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr, 
-        asparse, standardize), 
-	logit = logit(bn, 
-        bs, ix, iy, nobs, nvars, x, y, pf, dfmax, pmax, nlam, flmin, 
-        ulam, eps, maxit, vnames, group, intr), 
-	sqsvm = sqsvm(bn, bs, ix, iy, 
-        nobs, nvars, x, y, pf, dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, 
-        group, intr), 
-	hsvm = hsvm(delta, bn, bs, ix, iy, nobs, nvars, x, y, 
-        pf, dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr),
-	wls = wls(bn, bs, ix, iy, nobs, nvars, x, y, pf, weight, 
-        dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr)
+    fit <- switch(
+      loss, 
+      ls = ls(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
+              dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr), 
+      ls_sparse = ls_sparse(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
+                            dfmax, pmax, nlam, flmin, ulam, eps, maxit, 
+                            vnames, group, intr, asparse, standardize),
+      stop("Named loss not supported.")
 		)
     #################################################################################
     # output
