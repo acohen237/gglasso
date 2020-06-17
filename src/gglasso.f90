@@ -626,75 +626,221 @@ SUBROUTINE strong_rule (njxx, pmax, jxx, bn, ga, pf, tlam, alsparse)
     IF(ga(g) > pf(g)*tlam*(1-alsparse)) THEN
       njxx = njxx + 1
       IF(njxx > pmax) RETURN
-      jxx(1:njxx) = (/jxx(1:posxx-1),g,jxx(posxx:njxx-1)/) ! shift and insert
+      IF(posxx > 1) THEN
+        jxx(1:njxx) = (/jxx(1:posxx-1),g,jxx(posxx:njxx-1)/) ! shift and insert
+      ELSE
+        jxx(1:njxx) = (/ g, jxx(1:njxx-1) /)
+      ENDIF
+      posxx = posxx + 1
     ENDIF
   ENDDO
 END SUBROUTINE strong_rule
 
+SUBROUTINE softthresh(vec, thresh, n)
+  INTEGER :: n, it
+  DOUBLE PRECISION :: vec(n)
+  DOUBLE PRECISION :: sg
+  DO it=1,n
+    sg = vec(it)
+    vec(it) = sign(max(abs(sg) - thresh, 0.0D0), sg)
+  ENDDO
+END SUBROUTINE softthresh
 
-SUBROUTINE kkt_check (bn, ix, iy, bs, lama, r, x, nobs, nvars, pf, ga, lam1ma, jx, jxx, njxx, dfmax)
+
+
+SUBROUTINE kkt_check (strong, nstrong, active, nactive, ix, iy, bs, bn,&
+     lama, r, x, nobs, nvars, pf, ga, lam1ma, addactive, dfmax, checkall)
   IMPLICIT NONE
 
-  INTEGER, INTENT(IN) :: bn, nobs, nvars, dfmax, njxx
+  INTEGER, INTENT(IN) ::nstrong, nobs, nvars, dfmax, bn, checkall
   INTEGER, INTENT(IN) ::ix(bn)
   INTEGER, INTENT(IN) ::iy(bn)
   INTEGER, INTENT(IN) ::bs(bn)
+  INTEGER, INTENT(IN) ::strong(dfmax)
   DOUBLE PRECISION, INTENT(IN) :: lama, lam1ma
   DOUBLE PRECISION, INTENT(IN) :: pf(bn)
   DOUBLE PRECISION, INTENT(IN) :: ga(bn) ! this is possibly big, and redundant. Use Dmat structure
-  INTEGER :: jx
-  INTEGER :: jxx(dfmax)
   DOUBLE PRECISION, INTENT(IN) :: r(nobs)
   DOUBLE PRECISION, INTENT(IN) :: x(nobs,nvars) ! supposedly means x constant
-  INTEGER :: posxx
-  DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: s ! takes the place of 'u' in update for ls
+  INTEGER :: addactive, nactive
+  INTEGER :: active(dfmax)
+  INTEGER :: posxx, startix, endix, gidx, g, stopper
+  DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: s 
   
   posxx = 1
-  DO g = 1, bn
-    IF(jxx(posxx) == g) THEN
-      posxx = posxx + 1
-      CYCLE
-    ENDIF
-    startix=ix(g)
-    endix=iy(g)
-    ALLOCATE(s(bs(g)))
-    s = matmul(r,x(:,startix:endix))/nobs
-    DO soft_g = 1, bs(g)
-      s(soft_g) = sign(max(abs(s(soft_g))-lama, 0.0D0), s(soft_g))
-    ENDDO
-    snorm = sqrt(dot_product(s,s))
-    ga(g) = snorm
-    DEALLOCATE(s)
-    IF(ga(g) > pf(g)*lam1ma) THEN
-      njxx = njxx + 1
-      IF(njxx > dfmax) RETURN
-      jxx(g) = 1
-      jxx(1:njxx) = (/jxx(1:posxx-1),g,jxx(posxx:njxx-1)/) ! shift and insert
-    ENDIF
+  IF(checkall == 1) THEN
+     stopper = bn
+  ELSE
+     stopper = nstrong
+  ENDIF
+  DO g = 1, stopper
+     IF(checkall==1) THEN
+        gidx = g
+     ELSE
+        gidx = strong(g)
+     ENDIF
+     IF(active(posxx) == gidx) THEN
+        posxx = posxx + 1
+        CYCLE
+     ENDIF
+     startix=ix(gidx)
+     endix=iy(gidx)
+     ALLOCATE(s(bs(gidx)))
+     s = matmul(r,x(:,startix:endix))/nobs
+     softthresh(s, lama)
+     snorm = sqrt(dot_product(s,s))
+     ga(gidx) = snorm
+     DEALLOCATE(s)
+     IF(ga(gidx) > pf(gidx)*lam1ma) THEN
+        nactive = nactive + 1
+        addactive = 1
+        IF(nactive > dfmax) RETURN
+        active(posxx:nactive) = (/gidx, active(posxx:nactive-1)/)
+        posxx = posxx + 1
+     ENDIF
   ENDDO
 END SUBROUTINE kkt_check
 
-FUNCTION mulvecD(b, D, drows, dcols, belem)
+
+
+SUBROUTINE LOOP_ACTIVE (nactive, active_set, ix, iy, bs, bn, b,&
+      bspot, lb, r, x, nobs, ts, lama, lam1ma, pf, gam, dif)
+
   IMPLICIT NONE
-  
-  INTEGER, INTENT(IN) :: drows, dcols, belem
-  DOUBLE PRECISION, INTENT(IN) :: D(drows, dcols)
-  DOUBLE PRECISION, INTENT(IN) :: b(belem)
-  DOUBLE PRECISION, INTENT(OUT) :: z(drows)
+  INTEGER :: nactive, gidx, g, bn, startix, endix, nobs, lb
+  INTEGER :: active_set(nactive)
+  INTEGER, INTENT(IN) :: bs(bn), ix(bn), iy(bn)
+  INTEGER, INTENT(IN) :: bspot(nactive)
+  DOUBLE PRECISION :: b(lb)
+  DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: dd
+  DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: oldb
+  DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: tempb
+  DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: s
+  DOUBLE PRECISION :: tea, snorm, ts, lama, lam1ma, dif
+  DOUBLE PRECISION :: r(nobs)
+  DOUBLE PRECISION, INTENT(IN) :: x(nobs, nvars)
+  DOUBLE PRECISION, INTENT(IN)::pf(bn)
+  DOUBLE PRECISION, INTENT(IN)::gam(bn)
 
-  INTEGER :: i,j,k
-
-  z = 0
-  
-  DO j=0,belem-1
-    k = MOD(j, dcols) + 1
-    DO i=1,drows
-      z(i) += D(i,k) * b(j)
-    ENDDO
+  DO g=1,nactive
+    gidx = active_set(g)
+    startix = ix(gidx)
+    endix = iy(gidx)
+    ALLOCATE(dd(bs(gidx)))
+    ALLOCATE(oldb(bs(gidx)))
+    ALLOCATE(tempb(bs(gidx)))
+    ALLOCATE(s(bs(gidx)))
+    tempb = b(bspot(g):bspot(g) + bs(gidx))
+    oldb = tempb
+    s = matmul(r, x(:,startix:endix))/nobs
+    s = s*ts(gidx) + tempb
+    softthresh(s, lama*ts(gidx), bs(gidx))
+    snorm = sqrt(dot_product(s,s))
+    tea = snorm - ts(gidx)*lam1ma*pf(gidx)
+    IF(tea > 0.0D0) THEN
+      tempb = s*tea/snorm
+    ELSE
+      tempb = 0.0D0
+    ENDIF
+    b(bspot(g):bspot(g)+bs(gidx)) = tempb
+    dd = tempb - oldb
+    IF(any(dd .ne. 0.0D0)) THEN
+      dif = max(dif, gam(gidx)**2*dot_(dd,dd))
+      r=r-matmul(x(:,startix:endix),dd)
+    ENDIF
+    DEALLOCATE(dd,oldb,tempb,s)
   ENDDO
+END SUBROUTINE LOOP_ACTIVE
+
+SUBROUTINE new_loss ()
+  IMPLICIT NONE
+
+  ! Declarations
+
+  ! Initialization
+
+  ! Lambda loop
+   IF(flmin < 1.0D0) THEN ! THIS is the default...
+     flmin = Max (mfl, flmin) ! just sets a threshold above zero
+     alf=flmin**(1.0D0/(nlam-1.0D0))
+  ENDIF
+  vl = matmul(r, x)/nobs ! Note r gets updated in middle and inner loop, big, but we need it
+  al0 = 0.0D0
+  DO g = 1,bn ! For each group... !
+    ALLOCATE(u(bs(g)))
+    u = vl(ix(g):iy(g))
+    ga(g) = sqrt(dot_product(u,u))
+    DEALLOCATE(u)
+  ENDDO
+  DO vl_iter = 1,nvars
+    al0 = max(al0, abs(vl(vl_iter))) ! Infty norm of X'y, big overkill for lam_max
+  ENDDO
+  al = al0 ! / (1-alsparse) ! this value ensures all betas are 0
+  l = 0
+  tlam = 0.0D0
+  DO WHILE (l < nlam) !! This is the start of the loop over all lambda values...
+    al0 = al ! store old al value on subsequent loops, first set to al
+    IF(flmin>=1.0D0) THEN ! user supplied lambda value, break out of everything
+      l = l+1
+      al=ulam(l)
+    ELSE
+      IF(l > 1) THEN ! have some active groups
+        al=al*alf
+        tlam = max((2.0*al-al0), 0.0) ! Here is the strong rule...
+        l = l+1
+      ELSE IF(l==0) THEN ! Trying to find an active group
+        al=al*.99
+        tlam=al
+      ENDIF
+    ENDIF
+    lama = al*alsparse
+    lam1ma = al*(1-alsparse)
+    ! This is the start of the algorithm, for a given lambda...
+    ! We no longer check the strong rule first, instead, we iterate over A(lam) (ever-active set)
+    DO
+       IF(nactive>0) THEN
+          oldbeta(:,1:ni) = b(:,1:ni) ! here's a copy to sparsify
+       ENDIF
+       DO ! print *, "This is where we enter the middle loop"
+          npass=npass+1
+          dif=0.0D0
+          LOOP_ACTIVE (nactive, active, ix, iy, bs, bn, b,&
+               bspot, lb, r, x, nobs, ts, lama, lam1ma, pf, gam, dif)
+          IF (nactive > pmax) EXIT
+          IF (dif < eps) EXIT
+          IF(npass > maxit) THEN
+             jerr=-l
+             RETURN
+          ENDIF
   
-  RETURN
-END FUNCTION
+
+END SUBROUTINE NEW_LOSS
+
+
+!FUNCTION mulvecD(b, D, drows, dcols, belem)
+!  IMPLICIT NONE
+!
+!  INTEGER, INTENT(IN) :: drows, dcols, belem
+!  DOUBLE PRECISION, INTENT(IN) :: D(drows, dcols)
+!  DOUBLE PRECISION, INTENT(IN) :: b(belem)
+!  DOUBLE PRECISION, INTENT(OUT) :: z(drows)
+!
+!  INTEGER :: i,j,k
+!
+!  z = 0
+!
+!  DO j=0,belem-1
+!    k = MOD(j, dcols) + 1
+!    DO i=1,drows
+!      z(i) += D(i,k) * b(j)
+!    ENDDO
+!  ENDDO
+!
+!  RETURN
+!END FUNCTION
+
+
+
 
 
 
@@ -747,6 +893,7 @@ SUBROUTINE ls_f_sparse_beta (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,f
   DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: oldbeta
   DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: r ! Residue y-beta_k*x etc
   DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: oldb
+  DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: tempb
   DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: u ! No longer using this for update step, but still need for other parts
   DOUBLE PRECISION, DIMENSION (:), ALLOCATABLE :: dd
   INTEGER, DIMENSION (:), ALLOCATABLE :: oidx
@@ -770,17 +917,18 @@ SUBROUTINE ls_f_sparse_beta (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,f
   DOUBLE PRECISION:: tlam
   DOUBLE PRECISION:: lama
   DOUBLE PRECISION:: lam1ma
-  INTEGER:: jx
+  INTEGER:: jx, bsmax, grind
   INTEGER:: jxx(dfmax) ! was length bn, 0/1 if active, making list of actives
   INTEGER:: njxx ! place to store how many are nonzero
-  DOUBLE PRECISION:: ga(bn) ! this is possibly big, and redundant. Use Dmat structure
+  DOUBLE PRECISION:: ga(bn)
   DOUBLE PRECISION:: vl(nvars) ! this is big, what can we do?
   DOUBLE PRECISION:: al0
+  bsmax = maxval(bs)
   ! - - - allocate variables - - -
-  ALLOCATE(b(1:dfmax)) ! make them 1 index (ditch intercept), to dfmax
-  ALLOCATE(oldbeta(1:dfmax)) ! make them 1 index (ditch intercept)
+  ALLOCATE(b(1:dfmax*bsmax)) ! make them 1 index (ditch intercept), to dfmax
+  ALLOCATE(oldbeta(1:dfmax*bsmax)) ! make them 1 index (ditch intercept)
   ALLOCATE(r(1:nobs))
-  ALLOCATE(oidx(1:bn))
+  ALLOCATE(oidx(1:bn)) ! what's the deal here?
   ! - - - checking pf - ! pf is the relative penalties for each group
   IF(maxval(pf) <= 0.0D0) THEN
      jerr=10000
@@ -821,7 +969,7 @@ SUBROUTINE ls_f_sparse_beta (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,f
   DO vl_iter = 1,nvars
     al0 = max(al0, abs(vl(vl_iter))) ! Infty norm of X'y, big overkill for lam_max
   ENDDO
-  al = al0 ! / (1-alsparse) ! this value ensures all betas are 0 , divide by 1-a?
+  al = al0 ! / (1-alsparse) ! this value ensures all betas are 0
   l = 0
   tlam = 0.0D0
   DO WHILE (l < nlam) !! This is the start of the loop over all lambda values...
@@ -842,45 +990,44 @@ SUBROUTINE ls_f_sparse_beta (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,f
     lama = al*alsparse
     lam1ma = al*(1-alsparse)
     ! This is the start of the algorithm, for a given lambda...
-    ! This is the strong rule check, unfortunately, jxx should be sorted...
-    strong_rule(njxx, dfmax, jxx, bn, ga, pf, tlam, alsparse)
+    ! We no longer check the strong rule first, instead, we iterate over A(lam) (ever-active set)
+    ! OLD: This is the strong rule check, unfortunately, jxx should be sorted...
+    ! OLD: strong_rule(njxx, dfmax, jxx, bn, ga, pf, tlam, alsparse)
     ! --------- outer loop ---------------------------- !
     DO
       IF(ni>0) THEN
-        DO j=1,ni ! sparsity alters the copy here
-          g=idx(j)
-          oldbeta(ix(g):iy(g))=b(ix(g):iy(g))
-        ENDDO
+        oldbeta(:,1:ni) = b(:,1:ni)
       ENDIF
       ! --middle loop-------------------------------------
       DO ! print *, "This is where we enter the middle loop"
         npass=npass+1
         dif=0.0D0
-        DO g=1,bn
-          IF(jxx(g) == 0) CYCLE
-          startix=ix(g)
-          endix=iy(g)
-          ALLOCATE(dd(bs(g)))
-          ALLOCATE(oldb(bs(g)))
-          oldb=b(startix:endix) ! how do we index into this? we do it repeatedly
-            ! maybe replace with a temp?
-          ALLOCATE(s(bs(g)))
+        DO g=1,njxx
+          grind = jxx(g)
+          startix=ix(grind)
+          endix=iy(grind)
+          ALLOCATE(dd(bs(grind)))
+          ALLOCATE(oldb(bs(grind)))
+          ALLOCATE(tempb(bs(grind)))
+          tempb=b(1:bs(grind),g)
+          oldb=tempb
+          ALLOCATE(s(bs(grind)))
           s = matmul(r,x(:,startix:endix))/nobs
-          s = s*t_for_s(g) + b(startix:endix)
-          DO soft_g = 1, bs(g)
+          s = s*t_for_s(grind) + tempb
+          DO soft_g = 1, bs(grind)
             sg = s(soft_g)
-            s(soft_g) = sign(max(abs(s(soft_g))-lama*t_for_s(g), 0.0D0), s(soft_g))
+            s(soft_g) = sign(max(abs(sg)-lama*t_for_s(grind), 0.0D0), sg)
           ENDDO
           snorm = sqrt(dot_product(s,s))
-          tea = snorm - t_for_s(g)*lam1ma*pf(g)
+          tea = snorm - t_for_s(grind)*lam1ma*pf(grind)
           IF(tea>0.0D0) THEN
-            b(startix:endix) = s*tea/snorm
+            tempb = s*tea/snorm
           ELSE
-            b(startix:endix) = 0.0D0
+            tempb = 0.0D0
           ENDIF
-          dd=b(startix:endix)-oldb
+          dd=tempb-oldb
           IF(any(dd/=0.0D0)) THEN
-            dif=max(dif,gam(g)**2*dot_product(dd,dd))
+            dif=max(dif,gam(grind)**2*dot_product(dd,dd))
             r=r-matmul(x(:,startix:endix),dd)
             IF(oidx(g)==0) THEN ! Here is where middle loop is different;
               ! if group g was not in oidx (active), and the
@@ -979,7 +1126,7 @@ SUBROUTINE ls_f_sparse_beta (bn,bs,ix,iy,gam,nobs,nvars,x,y,pf,dfmax,pmax,nlam,f
       g=idx(j)
       IF(any(beta(ix(g):iy(g),l)/=0.0D0)) me=me+1 ! just counts active groups
     ENDDO
-    IF(njxx > dfmax) EXIT
+    IF(me > dfmax) EXIT
   ENDDO ! end lambda loop
   DEALLOCATE(b,oldbeta,r,oidx)
   RETURN

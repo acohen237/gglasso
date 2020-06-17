@@ -106,10 +106,11 @@
 #' m2 <- gglasso(x=colon$x,y=colon$y,group=group2,loss="logit")
 #' 
 #' @export
-gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse"), nlambda = 100, lambda.factor = ifelse(nobs < nvars, 0.01, 1e-04), 
-    lambda = NULL, pf = sqrt(bs), weight = NULL, dfmax = as.integer(max(group)) + 
-        1, pmax = min(dfmax * 1.2, as.integer(max(group))), eps = 1e-08, maxit = 3e+08, 
-    delta, intercept=TRUE, asparse = 0.05, standardize=TRUE) {
+gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse", "ls_sparseOLD", "ls_sparseSR"), 
+                    nlambda = 100, lambda.factor = ifelse(nobs < nvars, 0.01, 1e-04), 
+                    lambda = NULL, pf = sqrt(bs), weight = NULL, dfmax = as.integer(max(group)) + 1,
+                    pmax = min(dfmax * 1.2, as.integer(max(group))), eps = 1e-08, maxit = 3e+08, 
+                    delta, intercept=TRUE, asparse = 0.05, standardize=TRUE) {
     #################################################################################
     #\tDesign matrix setup, error checking
     this.call <- match.call()
@@ -210,7 +211,13 @@ gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse"), nlambda = 1
       loss, 
       ls = ls(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
               dfmax, pmax, nlam, flmin, ulam, eps, maxit, vnames, group, intr), 
+      ls_sparseOLD = ls_sparseOLD(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
+                            dfmax, pmax, nlam, flmin, ulam, eps, maxit, 
+                            vnames, group, intr, asparse, standardize),
       ls_sparse = ls_sparse(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
+                            dfmax, pmax, nlam, flmin, ulam, eps, maxit, 
+                            vnames, group, intr, asparse, standardize),
+      ls_sparseSR = ls_sparseSR(bn, bs, ix, iy, nobs, nvars, x, y, pf, 
                             dfmax, pmax, nlam, flmin, ulam, eps, maxit, 
                             vnames, group, intr, asparse, standardize),
       stop("Named loss not supported.")
@@ -223,3 +230,19 @@ gglasso <- function(x, y, group = NULL, loss = c("ls", "ls_sparse"), nlambda = 1
     class(fit) <- c("gglasso", class(fit))
     fit
 } 
+
+#' Title
+#'
+#' @param x a vector
+#' @param y another vector
+#' @param z third vector
+#'
+#' @return vector
+#' @export
+#'
+#' @examples
+#' 
+#' my_fun(1,2,3)
+my_fun <- function(x, y, z){
+  x+y+z
+}

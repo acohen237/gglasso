@@ -8,7 +8,7 @@ gglasso(
   x,
   y,
   group = NULL,
-  loss = c("ls", "ls_sparse"),
+  loss = c("ls", "ls_sparse", "ls_sparseOLD", "ls_sparseSR"),
   nlambda = 100,
   lambda.factor = ifelse(nobs < nvars, 0.01, 1e-04),
   lambda = NULL,
